@@ -1,13 +1,13 @@
-# weather-predictor
+---
+title: Dmi Vs Ml Dashboard
+emoji: 🏃
+colorFrom: indigo
+colorTo: red
+sdk: gradio
+sdk_version: 6.8.0
+app_file: app.py
+pinned: false
+license: cc0-1.0
+---
 
-## Hugging Face working copies
-
-Clone the Hugging Face Spaces and Datasets into `hf/` with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup-hf-repos.ps1
-```
-
-Open `weather-predictor-hf.code-workspace` in VS Code to work with the parent repo and all nested Hugging Face repos in one window.
-
-Internal technical context for the current HF setup lives in `docs/system-context.md`.
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
