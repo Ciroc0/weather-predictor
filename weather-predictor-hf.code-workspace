@@ -1,0 +1,25 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "hf/spaces/dmi-collector"
+    },
+    {
+      "path": "hf/spaces/dmi-vs-ml-dashboard"
+    },
+    {
+      "path": "hf/spaces/dmi-ml-trainer"
+    },
+    {
+      "path": "hf/datasets/dmi-aarhus-predictions"
+    },
+    {
+      "path": "hf/datasets/dmi-aarhus-weather-data"
+    }
+  ],
+  "settings": {
+    "git.detectSubmodules": false
+  }
+}
