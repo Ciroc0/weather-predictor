@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/temperatur",
+      "destination": "/"
+    },
+    {
+      "source": "/vind",
+      "destination": "/"
+    },
+    {
+      "source": "/regn",
+      "destination": "/"
+    },
+    {
+      "source": "/performance",
+      "destination": "/"
+    }
+  ]
+}
