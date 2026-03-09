@@ -6,6 +6,7 @@ export function WindPage() {
   return (
     <WindTab
       forecast={response.snapshot.forecast}
+      history={response.snapshot.history.wind}
       alerts={response.snapshot.alerts}
       windStatus={response.snapshot.targetStatus.wind_speed}
       gustStatus={response.snapshot.targetStatus.wind_gust}

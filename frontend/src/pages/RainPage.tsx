@@ -6,6 +6,7 @@ export function RainPage() {
   return (
     <RainTab
       forecast={response.snapshot.forecast}
+      history={response.snapshot.history.rain}
       alerts={response.snapshot.alerts}
       rainEventStatus={response.snapshot.targetStatus.rain_event}
       rainAmountStatus={response.snapshot.targetStatus.rain_amount}

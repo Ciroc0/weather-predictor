@@ -2,7 +2,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Info, Thermometer, TrendingDown } from "lucide-react";
 import {
-  Area,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -26,6 +25,7 @@ import {
 import { formatShortDate, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
+  HistoricalTemperaturePoint,
   TargetStatus,
   VerificationMetrics,
   WeatherForecast,
@@ -33,17 +33,21 @@ import type {
 
 interface TemperatureTabProps {
   forecast: WeatherForecast[];
+  history: HistoricalTemperaturePoint[];
   verification: VerificationMetrics;
   targetStatus: TargetStatus;
   explanations: DashboardExplanations;
 }
 
-interface TemperatureChartPoint {
+interface TemperatureTimelinePoint {
   time: string;
-  dmi: number | null;
-  ml: number | null;
-  apparent: number | null;
-  hour: number;
+  actual: number | null;
+  dmiHistory: number | null;
+  mlHistory: number | null;
+  dmiForecast: number | null;
+  mlForecast: number | null;
+  apparentForecast: number | null;
+  hour: number | null;
 }
 
 interface TooltipPayloadItem {
@@ -54,22 +58,39 @@ interface TooltipPayloadItem {
 
 export function TemperatureTab({
   forecast,
+  history,
   verification,
   targetStatus,
   explanations,
 }: TemperatureTabProps) {
   const hasMlSeries = targetStatus.hasActiveModel && forecast.some((point) => point.mlTemp !== null);
+  const hasHistory = history.length > 0;
   const [showDmi, setShowDmi] = useState(true);
   const [showMl, setShowMl] = useState(hasMlSeries);
   const [showApparent, setShowApparent] = useState(true);
 
-  const chartData: TemperatureChartPoint[] = forecast.map((point) => ({
-    time: formatShortDate(point.timestamp),
-    dmi: point.dmiTemp,
-    ml: hasMlSeries ? point.mlTemp : null,
-    apparent: point.apparentTemp,
-    hour: point.hour,
-  }));
+  const timelineData: TemperatureTimelinePoint[] = [
+    ...history.map((point) => ({
+      time: formatShortDate(point.timestamp),
+      actual: point.actualTemp,
+      dmiHistory: point.dmiTemp,
+      mlHistory: point.mlTemp,
+      dmiForecast: null,
+      mlForecast: null,
+      apparentForecast: null,
+      hour: null,
+    })),
+    ...forecast.map((point) => ({
+      time: formatShortDate(point.timestamp),
+      actual: null,
+      dmiHistory: null,
+      mlHistory: null,
+      dmiForecast: point.dmiTemp,
+      mlForecast: hasMlSeries ? point.mlTemp : null,
+      apparentForecast: point.apparentTemp,
+      hour: point.hour,
+    })),
+  ];
 
   const differences = forecast
     .map((point) =>
@@ -79,7 +100,7 @@ export function TemperatureTab({
   const avgDiff =
     differences.length > 0 ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
   const maxDiff = differences.length > 0 ? Math.max(...differences) : null;
-  const nextDayIndex = forecast.findIndex((point, index) => index > 0 && point.hour === 0);
+  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].timestamp) : null;
 
   const improvement =
     verification.rmseDmi !== null && verification.rmseMl !== null && verification.rmseDmi > 0
@@ -151,7 +172,7 @@ export function TemperatureTab({
               </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              DMI er grundprognosen. ML er vores justering. Begge er prognoser, ikke observationer.
+              Sort er faktisk vejr i de sidste 7 dage. Faste linjer er backtest. Stiplede linjer er de naeste 48 timer.
             </TooltipContent>
           </UiTooltip>
         </TooltipProvider>
@@ -162,7 +183,7 @@ export function TemperatureTab({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Thermometer className="h-5 w-5 text-slate-500" />
-              48-timers temperaturprognose
+              Sidste 7 dage + naeste 48 timer
             </CardTitle>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
@@ -170,12 +191,7 @@ export function TemperatureTab({
                 <Label htmlFor="temp-dmi">DMI</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch
-                  id="temp-ml"
-                  checked={showMl}
-                  onCheckedChange={setShowMl}
-                  disabled={!hasMlSeries}
-                />
+                <Switch id="temp-ml" checked={showMl} onCheckedChange={setShowMl} disabled={!hasMlSeries} />
                 <Label htmlFor="temp-ml">ML</Label>
               </div>
               <div className="flex items-center gap-2">
@@ -186,51 +202,60 @@ export function TemperatureTab({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[360px] w-full">
+          <div className="h-[380px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="temp-dmi-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="temp-ml-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <ComposedChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                 <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
                 <Tooltip content={<CustomTooltip />} />
-                {nextDayIndex > 0 ? (
+                {forecastBoundaryLabel ? (
                   <ReferenceLine
-                    x={chartData[nextDayIndex]?.time}
+                    x={forecastBoundaryLabel}
                     stroke="currentColor"
                     strokeDasharray="4 4"
-                    label={{ value: "Naeste doegn", position: "top", fontSize: 10, fill: "currentColor" }}
+                    label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
                   />
+                ) : null}
+                {hasHistory ? (
+                  <Line type="monotone" dataKey="actual" name="Actual" stroke="#111827" strokeWidth={2} dot={false} />
                 ) : null}
                 {showDmi ? (
                   <>
-                    <Area type="monotone" dataKey="dmi" fill="url(#temp-dmi-gradient)" stroke="transparent" />
-                    <Line type="monotone" dataKey="dmi" name="DMI" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="dmiForecast"
+                      name="DMI Forecast"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
                   </>
                 ) : null}
                 {showMl && hasMlSeries ? (
                   <>
-                    <Area type="monotone" dataKey="ml" fill="url(#temp-ml-gradient)" stroke="transparent" />
-                    <Line type="monotone" dataKey="ml" name="ML" stroke="#10b981" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="mlForecast"
+                      name="ML Forecast"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
                   </>
                 ) : null}
                 {showApparent ? (
                   <Line
                     type="monotone"
-                    dataKey="apparent"
+                    dataKey="apparentForecast"
                     name="Foeles som"
                     stroke="#f59e0b"
                     strokeWidth={2}
-                    strokeDasharray="5 5"
+                    strokeDasharray="3 3"
                     dot={false}
                   />
                 ) : null}
@@ -241,7 +266,7 @@ export function TemperatureTab({
       </Card>
 
       <div>
-        <h3 className="mb-4 text-lg font-semibold">Time for time</h3>
+        <h3 className="mb-4 text-lg font-semibold">Naeste 16 timer</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {forecast.slice(0, 16).map((hour, index) => (
             <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>

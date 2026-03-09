@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/weather";
 import type {
   DashboardExplanations,
+  HistoricalWindPoint,
   TargetStatus,
   WeatherAlert,
   WeatherForecast,
@@ -30,18 +32,25 @@ import type {
 
 interface WindTabProps {
   forecast: WeatherForecast[];
+  history: HistoricalWindPoint[];
   alerts: WeatherAlert[];
   windStatus: TargetStatus;
   gustStatus: TargetStatus;
   explanations: DashboardExplanations;
 }
 
-interface WindChartPoint {
+interface WindTimelinePoint {
   time: string;
-  dmiSpeed: number | null;
-  mlSpeed: number | null;
-  dmiGust: number | null;
-  mlGust: number | null;
+  actualSpeed: number | null;
+  dmiSpeedHistory: number | null;
+  mlSpeedHistory: number | null;
+  dmiSpeedForecast: number | null;
+  mlSpeedForecast: number | null;
+  actualGust: number | null;
+  dmiGustHistory: number | null;
+  mlGustHistory: number | null;
+  dmiGustForecast: number | null;
+  mlGustForecast: number | null;
 }
 
 interface TooltipPayloadItem {
@@ -73,6 +82,7 @@ function WindCompass({ direction, size = 84 }: { direction: number | null; size?
 
 export function WindTab({
   forecast,
+  history,
   alerts,
   windStatus,
   gustStatus,
@@ -84,16 +94,38 @@ export function WindTab({
   const [showMl, setShowMl] = useState(hasMlSpeed);
   const [showGusts, setShowGusts] = useState(true);
 
-  const chartData: WindChartPoint[] = forecast.map((point) => ({
-    time: formatShortDate(point.timestamp),
-    dmiSpeed: point.dmiWindSpeed,
-    mlSpeed: hasMlSpeed ? point.mlWindSpeed : null,
-    dmiGust: point.dmiWindGust,
-    mlGust: hasMlGust ? point.mlWindGust : null,
-  }));
+  const timelineData: WindTimelinePoint[] = [
+    ...history.map((point) => ({
+      time: formatShortDate(point.timestamp),
+      actualSpeed: point.actualWindSpeed,
+      dmiSpeedHistory: point.dmiWindSpeed,
+      mlSpeedHistory: point.mlWindSpeed,
+      dmiSpeedForecast: null,
+      mlSpeedForecast: null,
+      actualGust: point.actualWindGust,
+      dmiGustHistory: point.dmiWindGust,
+      mlGustHistory: point.mlWindGust,
+      dmiGustForecast: null,
+      mlGustForecast: null,
+    })),
+    ...forecast.map((point) => ({
+      time: formatShortDate(point.timestamp),
+      actualSpeed: null,
+      dmiSpeedHistory: null,
+      mlSpeedHistory: null,
+      dmiSpeedForecast: point.dmiWindSpeed,
+      mlSpeedForecast: hasMlSpeed ? point.mlWindSpeed : null,
+      actualGust: null,
+      dmiGustHistory: null,
+      mlGustHistory: null,
+      dmiGustForecast: point.dmiWindGust,
+      mlGustForecast: hasMlGust ? point.mlWindGust : null,
+    })),
+  ];
 
   const warning = alerts.find((alert) => alert.type === "wind");
   const currentWind = forecast[0];
+  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].timestamp) : null;
 
   const CustomTooltip = ({
     active,
@@ -212,45 +244,122 @@ export function WindTab({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Wind className="h-5 w-5 text-slate-500" />
-              48-timers vindprognose
+              Sidste 7 dage + naeste 48 timer
             </CardTitle>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Switch id="wind-dmi" checked={showDmi} onCheckedChange={setShowDmi} />
-                <Label htmlFor="wind-dmi">DMI hastighed</Label>
+                <Label htmlFor="wind-dmi">DMI</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="wind-ml" checked={showMl} onCheckedChange={setShowMl} disabled={!hasMlSpeed} />
-                <Label htmlFor="wind-ml">ML hastighed</Label>
+                <Label htmlFor="wind-ml">ML</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="wind-gusts" checked={showGusts} onCheckedChange={setShowGusts} />
-                <Label htmlFor="wind-gusts">Vindstoed</Label>
+                <Label htmlFor="wind-gusts">Vis vindstoed</Label>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-6 lg:grid-cols-2">
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                 <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
-                {showDmi ? <Line type="monotone" dataKey="dmiSpeed" name="DMI vind" stroke="#3b82f6" strokeWidth={2} dot={false} /> : null}
-                {showMl && hasMlSpeed ? <Line type="monotone" dataKey="mlSpeed" name="ML vind" stroke="#10b981" strokeWidth={2} dot={false} /> : null}
-                {showGusts ? (
+                {forecastBoundaryLabel ? (
+                  <ReferenceLine
+                    x={forecastBoundaryLabel}
+                    stroke="currentColor"
+                    strokeDasharray="4 4"
+                    label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
+                  />
+                ) : null}
+                <Line type="monotone" dataKey="actualSpeed" name="Actual Wind" stroke="#111827" strokeWidth={2} dot={false} />
+                {showDmi ? (
                   <>
-                    <Line type="monotone" dataKey="dmiGust" name="DMI vindstoed" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
-                    {hasMlGust ? (
-                      <Line type="monotone" dataKey="mlGust" name="ML vindstoed" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
-                    ) : null}
+                    <Line type="monotone" dataKey="dmiSpeedHistory" name="DMI Wind Backtest" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="dmiSpeedForecast"
+                      name="DMI Wind Forecast"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  </>
+                ) : null}
+                {showMl ? (
+                  <>
+                    <Line type="monotone" dataKey="mlSpeedHistory" name="ML Wind Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="mlSpeedForecast"
+                      name="ML Wind Forecast"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
                   </>
                 ) : null}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+
+          {showGusts ? (
+            <div className="h-[320px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                  <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  {forecastBoundaryLabel ? (
+                    <ReferenceLine
+                      x={forecastBoundaryLabel}
+                      stroke="currentColor"
+                      strokeDasharray="4 4"
+                      label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
+                    />
+                  ) : null}
+                  <Line type="monotone" dataKey="actualGust" name="Actual Wind Gust" stroke="#111827" strokeWidth={2} dot={false} />
+                  {showDmi ? (
+                    <>
+                      <Line type="monotone" dataKey="dmiGustHistory" name="DMI Gust Backtest" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="dmiGustForecast"
+                        name="DMI Gust Forecast"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                      />
+                    </>
+                  ) : null}
+                  {showMl && hasMlGust ? (
+                    <>
+                      <Line type="monotone" dataKey="mlGustHistory" name="ML Gust Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="mlGustForecast"
+                        name="ML Gust Forecast"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                      />
+                    </>
+                  ) : null}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
