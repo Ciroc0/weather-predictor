@@ -12,15 +12,28 @@ import {
 } from "recharts";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { formatShortDate, getWindDirectionLabel } from "@/lib/weather";
-import type { WeatherAlert, WeatherForecast } from "@/types/weather";
+import {
+  formatShortDate,
+  getSourceLabel,
+  getWindDirectionLabel,
+} from "@/lib/weather";
+import type {
+  DashboardExplanations,
+  TargetStatus,
+  WeatherAlert,
+  WeatherForecast,
+} from "@/types/weather";
 
 interface WindTabProps {
   forecast: WeatherForecast[];
   alerts: WeatherAlert[];
+  windStatus: TargetStatus;
+  gustStatus: TargetStatus;
+  explanations: DashboardExplanations;
 }
 
 interface WindChartPoint {
@@ -47,7 +60,7 @@ function WindCompass({ direction, size = 84 }: { direction: number | null; size?
       style={{ width: size, height: size }}
     >
       <span className="absolute top-1 text-[10px] font-bold text-slate-400">N</span>
-      <span className="absolute right-1 text-[10px] font-bold text-slate-400">Ø</span>
+      <span className="absolute right-1 text-[10px] font-bold text-slate-400">O</span>
       <span className="absolute bottom-1 text-[10px] font-bold text-slate-400">S</span>
       <span className="absolute left-1 text-[10px] font-bold text-slate-400">V</span>
       <motion.div animate={{ rotate: rotation }} transition={{ duration: 0.45, ease: "easeOut" }}>
@@ -58,17 +71,25 @@ function WindCompass({ direction, size = 84 }: { direction: number | null; size?
   );
 }
 
-export function WindTab({ forecast, alerts }: WindTabProps) {
+export function WindTab({
+  forecast,
+  alerts,
+  windStatus,
+  gustStatus,
+  explanations,
+}: WindTabProps) {
+  const hasMlSpeed = windStatus.hasActiveModel && forecast.some((point) => point.mlWindSpeed !== null);
+  const hasMlGust = gustStatus.hasActiveModel && forecast.some((point) => point.mlWindGust !== null);
   const [showDmi, setShowDmi] = useState(true);
-  const [showMl, setShowMl] = useState(true);
+  const [showMl, setShowMl] = useState(hasMlSpeed);
   const [showGusts, setShowGusts] = useState(true);
 
   const chartData: WindChartPoint[] = forecast.map((point) => ({
     time: formatShortDate(point.timestamp),
     dmiSpeed: point.dmiWindSpeed,
-    mlSpeed: point.mlWindSpeed,
+    mlSpeed: hasMlSpeed ? point.mlWindSpeed : null,
     dmiGust: point.dmiWindGust,
-    mlGust: point.mlWindGust,
+    mlGust: hasMlGust ? point.mlWindGust : null,
   }));
 
   const warning = alerts.find((alert) => alert.type === "wind");
@@ -114,6 +135,20 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
         </Alert>
       ) : null}
 
+      <Card className="border-slate-200 dark:border-slate-800">
+        <CardContent className="space-y-3 p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={windStatus.hasActiveModel ? "default" : "secondary"}>
+              {windStatus.statusLabel}
+            </Badge>
+            <Badge variant={gustStatus.hasActiveModel ? "default" : "secondary"}>
+              Vindstoed: {gustStatus.statusLabel}
+            </Badge>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{explanations.sources}</p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
@@ -121,11 +156,17 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Vindhastighed nu</p>
                 <p className="mt-1 text-4xl font-bold">
-                  {currentWind.mlWindSpeed !== null ? currentWind.mlWindSpeed.toFixed(1) : "—"}
+                  {currentWind.effectiveWindSpeed !== null ? currentWind.effectiveWindSpeed.toFixed(1) : "—"}
                   <span className="ml-1 text-lg font-normal text-slate-500">m/s</span>
                 </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "—"}
+                <Badge variant={currentWind.effectiveWindSpeedSource === "ml" ? "default" : "secondary"} className="mt-2">
+                  {getSourceLabel(currentWind.effectiveWindSpeedSource)}
+                </Badge>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  ML: {currentWind.mlWindSpeed !== null ? `${currentWind.mlWindSpeed.toFixed(1)} m/s` : "ikke aktiv"}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "ingen data"}
                 </p>
               </div>
               <WindCompass direction={currentWind.windDirection} size={104} />
@@ -135,13 +176,19 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
 
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Vindstød</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Vindstoed</p>
             <p className="mt-1 text-4xl font-bold">
-              {currentWind.mlWindGust !== null ? currentWind.mlWindGust.toFixed(1) : "—"}
+              {currentWind.effectiveWindGust !== null ? currentWind.effectiveWindGust.toFixed(1) : "—"}
               <span className="ml-1 text-lg font-normal text-slate-500">m/s</span>
             </p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "—"}
+            <Badge variant={currentWind.effectiveWindGustSource === "ml" ? "default" : "secondary"} className="mt-2">
+              {getSourceLabel(currentWind.effectiveWindGustSource)}
+            </Badge>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              ML: {currentWind.mlWindGust !== null ? `${currentWind.mlWindGust.toFixed(1)} m/s` : "ikke aktiv"}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "ingen data"}
             </p>
           </CardContent>
         </Card>
@@ -152,6 +199,9 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
             <p className="mt-1 text-3xl font-bold">{getWindDirectionLabel(currentWind.windDirection)}</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {currentWind.windDirection !== null ? `${Math.round(currentWind.windDirection)}°` : "Ingen data"}
+            </p>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Retningen viser, hvor vinden kommer fra i prognosen.
             </p>
           </CardContent>
         </Card>
@@ -170,12 +220,12 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
                 <Label htmlFor="wind-dmi">DMI hastighed</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch id="wind-ml" checked={showMl} onCheckedChange={setShowMl} />
+                <Switch id="wind-ml" checked={showMl} onCheckedChange={setShowMl} disabled={!hasMlSpeed} />
                 <Label htmlFor="wind-ml">ML hastighed</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="wind-gusts" checked={showGusts} onCheckedChange={setShowGusts} />
-                <Label htmlFor="wind-gusts">Vindstød</Label>
+                <Label htmlFor="wind-gusts">Vindstoed</Label>
               </div>
             </div>
           </div>
@@ -189,11 +239,13 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? <Line type="monotone" dataKey="dmiSpeed" name="DMI vind" stroke="#3b82f6" strokeWidth={2} dot={false} /> : null}
-                {showMl ? <Line type="monotone" dataKey="mlSpeed" name="ML vind" stroke="#10b981" strokeWidth={2} dot={false} /> : null}
+                {showMl && hasMlSpeed ? <Line type="monotone" dataKey="mlSpeed" name="ML vind" stroke="#10b981" strokeWidth={2} dot={false} /> : null}
                 {showGusts ? (
                   <>
-                    <Line type="monotone" dataKey="dmiGust" name="DMI vindstød" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
-                    <Line type="monotone" dataKey="mlGust" name="ML vindstød" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
+                    <Line type="monotone" dataKey="dmiGust" name="DMI vindstoed" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+                    {hasMlGust ? (
+                      <Line type="monotone" dataKey="mlGust" name="ML vindstoed" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3" dot={false} />
+                    ) : null}
                   </>
                 ) : null}
               </ComposedChart>
@@ -204,15 +256,18 @@ export function WindTab({ forecast, alerts }: WindTabProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Vindretning de næste 12 timer</CardTitle>
+          <CardTitle className="text-base">Vindretning de naeste 12 timer</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
           {forecast.slice(0, 12).map((hour) => (
             <div key={hour.timestamp} className="flex flex-col items-center">
               <WindCompass direction={hour.windDirection} size={64} />
               <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hour.hour}:00</span>
-              <span className="text-xs font-medium">
-                {hour.mlWindSpeed !== null ? `${hour.mlWindSpeed.toFixed(0)} m/s` : "—"}
+              <Badge variant={hour.effectiveWindSpeedSource === "ml" ? "default" : "secondary"} className="mt-1">
+                {getSourceLabel(hour.effectiveWindSpeedSource)}
+              </Badge>
+              <span className="mt-1 text-xs font-medium">
+                {hour.effectiveWindSpeed !== null ? `${hour.effectiveWindSpeed.toFixed(0)} m/s` : "—"}
               </span>
             </div>
           ))}

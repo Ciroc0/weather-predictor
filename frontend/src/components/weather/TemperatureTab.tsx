@@ -17,13 +17,25 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatShortDate } from "@/lib/weather";
-import type { VerificationMetrics, WeatherForecast } from "@/types/weather";
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatShortDate, getSourceLabel } from "@/lib/weather";
+import type {
+  DashboardExplanations,
+  TargetStatus,
+  VerificationMetrics,
+  WeatherForecast,
+} from "@/types/weather";
 
 interface TemperatureTabProps {
   forecast: WeatherForecast[];
   verification: VerificationMetrics;
+  targetStatus: TargetStatus;
+  explanations: DashboardExplanations;
 }
 
 interface TemperatureChartPoint {
@@ -40,15 +52,21 @@ interface TooltipPayloadItem {
   value: number;
 }
 
-export function TemperatureTab({ forecast, verification }: TemperatureTabProps) {
+export function TemperatureTab({
+  forecast,
+  verification,
+  targetStatus,
+  explanations,
+}: TemperatureTabProps) {
+  const hasMlSeries = targetStatus.hasActiveModel && forecast.some((point) => point.mlTemp !== null);
   const [showDmi, setShowDmi] = useState(true);
-  const [showMl, setShowMl] = useState(true);
+  const [showMl, setShowMl] = useState(hasMlSeries);
   const [showApparent, setShowApparent] = useState(true);
 
   const chartData: TemperatureChartPoint[] = forecast.map((point) => ({
     time: formatShortDate(point.timestamp),
     dmi: point.dmiTemp,
-    ml: point.mlTemp,
+    ml: hasMlSeries ? point.mlTemp : null,
     apparent: point.apparentTemp,
     hour: point.hour,
   }));
@@ -58,7 +76,8 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
       point.dmiTemp !== null && point.mlTemp !== null ? Math.abs(point.dmiTemp - point.mlTemp) : null,
     )
     .filter((value): value is number => value !== null);
-  const avgDiff = differences.length > 0 ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
+  const avgDiff =
+    differences.length > 0 ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
   const maxDiff = differences.length > 0 ? Math.max(...differences) : null;
   const nextDayIndex = forecast.findIndex((point, index) => index > 0 && point.hour === 0);
 
@@ -96,17 +115,31 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <Card className="border-slate-200 dark:border-slate-800">
+        <CardContent className="space-y-3 p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={targetStatus.hasActiveModel ? "default" : "secondary"}>
+              {targetStatus.statusLabel}
+            </Badge>
+            <Badge variant="outline">{explanations.forecast}</Badge>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{targetStatus.statusDescription}</p>
+        </CardContent>
+      </Card>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg">
             <TrendingDown className="h-4 w-4" />
-            {improvement !== null ? `Temperatur-RMSE ${improvement.toFixed(1)}% bedre end DMI` : "Temperatur-modellen evalueres løbende"}
+            {improvement !== null
+              ? `ML har ${improvement.toFixed(1)}% lavere fejl end DMI`
+              : "Temperaturmodellen evalueres loebende"}
           </div>
           <Badge variant="secondary">
-            {avgDiff !== null ? `Gennemsnitlig forskel: ${avgDiff.toFixed(2)}°C` : "Ingen forskelsdata"}
+            {avgDiff !== null ? `Typisk forskel: ${avgDiff.toFixed(2)}°C` : "Ingen aktiv ML-forskel endnu"}
           </Badge>
           <Badge variant="outline">
-            {maxDiff !== null ? `Maks forskel: ${maxDiff.toFixed(1)}°C` : "Ingen maksdata"}
+            {maxDiff !== null ? `Stoerste forskel: ${maxDiff.toFixed(1)}°C` : "Ingen stoerste forskel endnu"}
           </Badge>
         </div>
         <TooltipProvider>
@@ -114,11 +147,11 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
             <TooltipTrigger asChild>
               <button className="flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                 <Info className="h-4 w-4" />
-                Hvad gør ML-laget?
+                Saadan laeser du grafen
               </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              ML-laget justerer DMI's temperaturprognose med historiske Aarhus-data og lead-bucket-specifikke modeller.
+              DMI er grundprognosen. ML er vores justering. Begge er prognoser, ikke observationer.
             </TooltipContent>
           </UiTooltip>
         </TooltipProvider>
@@ -137,12 +170,17 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
                 <Label htmlFor="temp-dmi">DMI</Label>
               </div>
               <div className="flex items-center gap-2">
-                <Switch id="temp-ml" checked={showMl} onCheckedChange={setShowMl} />
+                <Switch
+                  id="temp-ml"
+                  checked={showMl}
+                  onCheckedChange={setShowMl}
+                  disabled={!hasMlSeries}
+                />
                 <Label htmlFor="temp-ml">ML</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="temp-apparent" checked={showApparent} onCheckedChange={setShowApparent} />
-                <Label htmlFor="temp-apparent">Føles som</Label>
+                <Label htmlFor="temp-apparent">Foeles som</Label>
               </div>
             </div>
           </div>
@@ -170,7 +208,7 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
                     x={chartData[nextDayIndex]?.time}
                     stroke="currentColor"
                     strokeDasharray="4 4"
-                    label={{ value: "Næste døgn", position: "top", fontSize: 10, fill: "currentColor" }}
+                    label={{ value: "Naeste doegn", position: "top", fontSize: 10, fill: "currentColor" }}
                   />
                 ) : null}
                 {showDmi ? (
@@ -179,7 +217,7 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
                     <Line type="monotone" dataKey="dmi" name="DMI" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   </>
                 ) : null}
-                {showMl ? (
+                {showMl && hasMlSeries ? (
                   <>
                     <Area type="monotone" dataKey="ml" fill="url(#temp-ml-gradient)" stroke="transparent" />
                     <Line type="monotone" dataKey="ml" name="ML" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -189,7 +227,7 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
                   <Line
                     type="monotone"
                     dataKey="apparent"
-                    name="Føles som"
+                    name="Foeles som"
                     stroke="#f59e0b"
                     strokeWidth={2}
                     strokeDasharray="5 5"
@@ -208,13 +246,23 @@ export function TemperatureTab({ forecast, verification }: TemperatureTabProps) 
           {forecast.slice(0, 16).map((hour, index) => (
             <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
               <CardContent className="p-3 text-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{hour.hour}:00</p>
-                <p className="my-1 text-xl font-bold">{hour.mlTemp !== null ? `${Math.round(hour.mlTemp)}°` : "—"}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "—"}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{hour.hour}:00</p>
+                  <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}>
+                    {getSourceLabel(hour.effectiveTempSource)}
+                  </Badge>
+                </div>
+                <p className="my-1 text-xl font-bold">
+                  {hour.effectiveTemp !== null ? `${Math.round(hour.effectiveTemp)}°` : "—"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Føles {hour.apparentTemp !== null ? `${Math.round(hour.apparentTemp)}°` : "—"}
+                  ML {hour.mlTemp !== null ? `${Math.round(hour.mlTemp)}°` : "ikke aktiv"}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "ingen data"}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Foeles {hour.apparentTemp !== null ? `${Math.round(hour.apparentTemp)}°` : "—"}
                 </p>
                 {index === 0 ? (
                   <Badge variant="outline" className="mt-2 border-emerald-500 text-emerald-600">

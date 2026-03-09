@@ -11,8 +11,16 @@ import {
   Wind,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import type { CurrentWeather } from "@/types/weather";
-import { formatDanishDate, formatDanishTime, getWeatherDescription } from "@/lib/weather";
+import {
+  formatDanishDate,
+  formatDanishTime,
+  formatMetric,
+  getSourceLabel,
+  getSourceShortLabel,
+  getWeatherDescription,
+} from "@/lib/weather";
 
 interface WeatherHeroProps {
   current: CurrentWeather;
@@ -31,6 +39,37 @@ function getWeatherIcon(code: number | null, className = "") {
   if (code !== null && code >= 71 && code <= 77) return <Snowflake className={className} />;
   if (code !== null && code >= 95) return <CloudLightning className={className} />;
   return <Cloud className={className} />;
+}
+
+function SourceDetails({
+  title,
+  source,
+  dmiValue,
+  mlValue,
+  suffix,
+}: {
+  title: string;
+  source: CurrentWeather["tempSource"];
+  dmiValue: number | null;
+  mlValue: number | null;
+  suffix: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
+        <Badge variant={source === "ml" ? "default" : "secondary"}>{getSourceLabel(source)}</Badge>
+      </div>
+      <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+        <p>
+          <span className="font-medium">ML:</span> {formatMetric(mlValue, suffix)}
+        </p>
+        <p>
+          <span className="font-medium">DMI:</span> {formatMetric(dmiValue, suffix)}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function WeatherHero({ current, generatedAt, summaryText, statusText }: WeatherHeroProps) {
@@ -55,20 +94,27 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Aarhus</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-6xl font-semibold tracking-tighter md:text-7xl">{temperature}</span>
-                <span className="text-2xl text-slate-500 dark:text-slate-400">°C</span>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-semibold tracking-tighter md:text-7xl">{temperature}</span>
+                  <span className="text-2xl text-slate-500 dark:text-slate-400">°C</span>
+                </div>
+                <Badge variant={current.tempSource === "ml" ? "default" : "secondary"}>
+                  {getSourceShortLabel(current.tempSource)}
+                </Badge>
               </div>
               <p className="mt-2 text-lg text-slate-700 dark:text-slate-300">
                 {getWeatherDescription(current.weatherCode)}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Føles som {apparent}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Foeles som {apparent}</p>
             </div>
           </div>
 
           <div className="space-y-2 text-left md:text-right">
             <p className="text-sm text-slate-500 dark:text-slate-400">{formatDanishDate(generatedAt)}</p>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Opdateret {formatDanishTime(generatedAt)}</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              Opdateret {formatDanishTime(generatedAt)}
+            </p>
             <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">{statusText}</p>
           </div>
         </div>
@@ -80,6 +126,9 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
               Vind
             </div>
             <p className="mt-2 text-2xl font-semibold">{wind}</p>
+            <Badge variant={current.windSpeedSource === "ml" ? "default" : "secondary"} className="mt-3">
+              {getSourceLabel(current.windSpeedSource)}
+            </Badge>
           </div>
           <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
@@ -87,11 +136,38 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
               Regnrisiko
             </div>
             <p className="mt-2 text-2xl font-semibold">{rain}</p>
+            <Badge variant={current.rainProbSource === "ml" ? "default" : "secondary"} className="mt-3">
+              {getSourceLabel(current.rainProbSource)}
+            </Badge>
           </div>
           <div className="rounded-2xl bg-slate-950 p-4 text-slate-50 ring-1 ring-slate-950 dark:bg-white dark:text-slate-950 dark:ring-slate-100">
-            <p className="text-sm uppercase tracking-wide opacity-70">Modelstatus</p>
+            <p className="text-sm uppercase tracking-wide opacity-70">Hvad betyder det?</p>
             <p className="mt-2 text-base font-medium">{summaryText}</p>
           </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <SourceDetails
+            title="Temperaturkilde"
+            source={current.tempSource}
+            dmiValue={current.dmiTemp}
+            mlValue={current.mlTemp}
+            suffix="°C"
+          />
+          <SourceDetails
+            title="Vindkilde"
+            source={current.windSpeedSource}
+            dmiValue={current.dmiWindSpeed}
+            mlValue={current.mlWindSpeed}
+            suffix=" m/s"
+          />
+          <SourceDetails
+            title="Regnkilde"
+            source={current.rainProbSource}
+            dmiValue={current.dmiRainProb}
+            mlValue={current.mlRainProb}
+            suffix="%"
+          />
         </div>
       </div>
     </motion.section>

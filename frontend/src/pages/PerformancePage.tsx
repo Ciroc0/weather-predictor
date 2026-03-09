@@ -11,6 +11,10 @@ export function PerformancePage() {
       leadBuckets={snapshot.leadBuckets}
       featureImportance={snapshot.featureImportance}
       modelInfo={snapshot.modelInfo}
+      history={snapshot.history}
+      targetStatus={snapshot.targetStatus}
+      targetLabels={snapshot.targetLabels}
+      explanations={snapshot.explanations}
     />
   );
 }

@@ -10,7 +10,7 @@ Præcise PowerShell-kommandoer til at arbejde med alle lokale Hugging Face-space
 git -C .\hf\spaces\dmi-collector status -sb
 git -C .\hf\spaces\dmi-collector pull --ff-only
 git -C .\hf\spaces\dmi-collector add .
-git -C .\hf\spaces\dmi-collector commit -m "Describe change"
+git -C .\hf\spaces\dmi-collector commit -m "Change for frontend"
 git -C .\hf\spaces\dmi-collector push
 git -C .\hf\spaces\dmi-collector remote -v
 ```
