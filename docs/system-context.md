@@ -55,6 +55,7 @@ Important code paths:
 - Training data build: `backfill_historical_data()` and `update_daily()`
 - Live predictions dataset write: `update_predictions()`
 - Prediction verification exists as `verify_past_predictions()`, but it is currently not wired into the scheduler or UI.
+- Frontend snapshots are rebuilt from the predictions dataset and now recompute missing future ML columns before publishing.
 
 Scheduler behavior:
 

@@ -21,7 +21,7 @@ git -C .\hf\spaces\dmi-collector remote -v
 git -C .\hf\spaces\dmi-ml-trainer status -sb
 git -C .\hf\spaces\dmi-ml-trainer pull --ff-only
 git -C .\hf\spaces\dmi-ml-trainer add .
-git -C .\hf\spaces\dmi-ml-trainer commit -m "Describe change"
+git -C .\hf\spaces\dmi-ml-trainer commit -m "Frontend"
 git -C .\hf\spaces\dmi-ml-trainer push
 git -C .\hf\spaces\dmi-ml-trainer remote -v
 ```
