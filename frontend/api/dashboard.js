@@ -299,26 +299,26 @@ export default async function handler(req, res) {
     const snapshot = {
       location: { name: "Aarhus", timezone: "Europe/Copenhagen" },
       generatedAt: new Date().toISOString(),
-      targetLabels: {
+      targetLabels: historySnapshot?.targetLabels || {
         temperature: "Temperatur",
         wind_speed: "Vindhastighed",
         wind_gust: "Vindstød",
         rain_event: "Regnrisiko",
         rain_amount: "Regnmængde",
       },
-      explanations: {
+      explanations: historySnapshot?.explanations || {
         forecast: "DMI's prognose vises sammen med vores ML-justering, når den er tilgængelig.",
         performance: "Se hvordan DMI og ML har klaret sig mod det faktiske vejr de seneste 7 dage.",
         sources: "DMI er grundprognosen. ML er vores lokale justering baseret på historiske data.",
       },
-      targetStatus,
+      targetStatus: historySnapshot?.targetStatus || targetStatus,
       current,
       forecast,
       history,
       verification,
-      leadBuckets: [],
-      featureImportance: [],
-      modelInfo: {
+      leadBuckets: historySnapshot?.leadBuckets || [],
+      featureImportance: historySnapshot?.featureImportance || [],
+      modelInfo: historySnapshot?.modelInfo || {
         trainedAt: null,
         trainingSamples: null,
         targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
