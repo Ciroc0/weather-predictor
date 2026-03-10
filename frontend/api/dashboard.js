@@ -1,5 +1,7 @@
-// Call HF Space API directly instead of parsing datasets
-const HF_SPACE_API = "https://ciroc0-dmi-vs-ml-dashboard.hf.space";
+import { parquetRead } from 'hyparquet';
+
+const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
+const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_TOKEN = process.env.HF_TOKEN;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -9,240 +11,222 @@ let cache = {
   fetchedAt: null,
 };
 
-async function fetchFromHFSpace() {
-  // HF Spaces med Gradio har et API på /api/predict
-  // Men vi kan også scrape data fra space'et eller kalde det direkte
-  
-  // Prøv at kalde space'ets API
-  const url = `${HF_SPACE_API}/api/predict`;
-  
-  const headers = {
-    "Content-Type": "application/json",
-  };
+async function fetchParquetBuffer(dataset, file) {
+  const url = `https://huggingface.co/datasets/${dataset}/resolve/main/${file}?download=true`;
+  const headers = {};
   
   if (HF_TOKEN) {
     headers.Authorization = `Bearer ${HF_TOKEN}`;
   }
   
-  console.log(`[HF Space] Calling: ${url}`);
+  console.log(`[HF] Fetching: ${url}`);
   
-  // Gradio API kræver en specifik payload
-  // Vi prøver at kalde refresh_dashboard funktionen
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      fn_index: 0,  // refresh_dashboard er typisk første funktion
-      data: [false], // force=false
-    }),
-  });
+  const response = await fetch(url, { headers, redirect: "follow" });
   
   if (!response.ok) {
-    const text = await response.text();
-    console.error(`[HF Space] Error ${response.status}:`, text.substring(0, 500));
-    throw new Error(`HF Space API error: ${response.status}`);
+    throw new Error(`Failed to fetch ${file}: ${response.status}`);
   }
   
-  const result = await response.json();
-  console.log(`[HF Space] Got response:`, Object.keys(result));
+  const buffer = await response.arrayBuffer();
+  console.log(`[HF] Got ${file}: ${buffer.byteLength} bytes`);
   
-  return result;
+  return buffer;
 }
 
-// Alternativ: Hent parquet filer direkte fra HF og parse med en simpel parser
-async function fetchParquetDirect() {
-  console.log("[Direct] Fetching parquet files directly from HF...");
+async function parseParquet(buffer) {
+  const rows = [];
   
-  // HF tillader direkte download af filer
-  const predictionsUrl = "https://huggingface.co/datasets/Ciroc0/dmi-aarhus-predictions/resolve/main/predictions_latest.parquet";
-  const trainingUrl = "https://huggingface.co/datasets/Ciroc0/dmi-aarhus-weather-data/resolve/main/training_matrix.parquet";
-  
-  const headers = {};
-  if (HF_TOKEN) {
-    headers.Authorization = `Bearer ${HF_TOKEN}`;
-  }
-  
-  console.log(`[Direct] Fetching predictions from: ${predictionsUrl}`);
-  
-  // Fetch med redirect
-  const predResponse = await fetch(predictionsUrl, { 
-    headers,
-    redirect: "follow",
+  await parquetRead({
+    file: buffer,
+    onComplete: (data) => {
+      rows.push(...data);
+    },
   });
   
-  if (!predResponse.ok) {
-    console.error(`[Direct] Predictions fetch failed: ${predResponse.status}`);
-    throw new Error(`Failed to fetch predictions: ${predResponse.status}`);
-  }
-  
-  console.log(`[Direct] Got predictions: ${predResponse.headers.get('content-length')} bytes`);
-  
-  // Læs som buffer
-  const predBuffer = await predResponse.arrayBuffer();
-  console.log(`[Direct] Predictions buffer: ${predBuffer.byteLength} bytes`);
-  
-  // Returnér rå data til debugging
-  return {
-    predictionsSize: predBuffer.byteLength,
-    predictionsBuffer: Buffer.from(predBuffer).toString('base64').substring(0, 100),
-  };
+  return rows;
 }
 
-// Fallback: Generer mock data baseret på hvad vi ved om strukturen
-function generateMockData() {
-  console.log("[Mock] Generating fallback data");
-  
-  const now = new Date();
+function buildForecast(predictionsRows) {
   const forecast = [];
+  const now = new Date();
   
-  // Generer 48 timer forecast
-  for (let i = 0; i < 48; i++) {
-    const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
+  console.log(`[Build] Processing ${predictionsRows.length} prediction rows`);
+  
+  for (const row of predictionsRows) {
+    const targetTime = new Date(row.target_timestamp);
+    if (targetTime <= now) continue;
+    
     forecast.push({
-      timestamp: hour.toISOString(),
-      hour: hour.getHours(),
-      leadTimeHours: i,
-      dmiTemp: 5 + Math.sin(i / 12) * 3,
-      mlTemp: null, // ML ikke aktiv endnu
-      effectiveTemp: 5 + Math.sin(i / 12) * 3,
-      effectiveTempSource: "dmi",
-      apparentTemp: 3 + Math.sin(i / 12) * 3,
-      dmiWindSpeed: 5 + Math.random() * 10,
-      mlWindSpeed: null,
-      effectiveWindSpeed: 5 + Math.random() * 10,
-      effectiveWindSpeedSource: "dmi",
-      dmiWindGust: 10 + Math.random() * 15,
-      mlWindGust: null,
-      effectiveWindGust: 10 + Math.random() * 15,
-      effectiveWindGustSource: "dmi",
-      windDirection: 180 + Math.random() * 180,
-      dmiRainProb: Math.random() * 30,
-      mlRainProb: 0,
-      effectiveRainProb: Math.random() * 30,
-      effectiveRainProbSource: "dmi",
-      dmiRainAmount: Math.random() * 2,
-      mlRainAmount: 0,
-      effectiveRainAmount: Math.random() * 2,
-      effectiveRainAmountSource: "dmi",
-      weatherCode: Math.random() > 0.7 ? 3 : 0,
-      cloudCover: Math.random() * 100,
-      humidity: 80 + Math.random() * 20,
-      pressure: 1013 + Math.random() * 10,
+      timestamp: row.target_timestamp,
+      hour: targetTime.getHours(),
+      leadTimeHours: row.lead_time_hours ?? Math.round((targetTime - now) / (1000 * 60 * 60)),
+      dmiTemp: row.dmi_temperature_2m_pred ?? null,
+      mlTemp: row.ml_temp ?? null,
+      effectiveTemp: row.ml_temp ?? row.dmi_temperature_2m_pred ?? null,
+      effectiveTempSource: row.ml_temp ? "ml" : "dmi",
+      apparentTemp: row.dmi_apparent_temperature_pred ?? row.dmi_temperature_2m_pred ?? null,
+      dmiWindSpeed: row.dmi_windspeed_10m_pred ?? null,
+      mlWindSpeed: row.ml_wind_speed ?? null,
+      effectiveWindSpeed: row.ml_wind_speed ?? row.dmi_windspeed_10m_pred ?? null,
+      effectiveWindSpeedSource: row.ml_wind_speed ? "ml" : "dmi",
+      dmiWindGust: row.dmi_windgusts_10m_pred ?? null,
+      mlWindGust: row.ml_wind_gust ?? null,
+      effectiveWindGust: row.ml_wind_gust ?? row.dmi_windgusts_10m_pred ?? null,
+      effectiveWindGustSource: row.ml_wind_gust ? "ml" : "dmi",
+      windDirection: row.dmi_winddirection_10m_pred ?? null,
+      dmiRainProb: row.dmi_precipitation_probability_pred ?? 0,
+      mlRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : 0,
+      effectiveRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : (row.dmi_precipitation_probability_pred ?? 0),
+      effectiveRainProbSource: row.ml_rain_prob ? "ml" : "dmi",
+      dmiRainAmount: row.dmi_precipitation_pred ?? 0,
+      mlRainAmount: row.ml_rain_amount ?? 0,
+      effectiveRainAmount: row.ml_rain_amount ?? row.dmi_precipitation_pred ?? 0,
+      effectiveRainAmountSource: row.ml_rain_amount ? "ml" : "dmi",
+      weatherCode: row.dmi_weathercode_pred ?? null,
+      cloudCover: row.dmi_cloudcover_pred ?? null,
+      humidity: row.dmi_relative_humidity_2m_pred ?? null,
+      pressure: row.dmi_pressure_msl_pred ?? null,
     });
   }
   
-  const current = forecast[0];
+  const result = forecast.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  console.log(`[Build] Built ${result.length} forecast entries`);
+  return result;
+}
+
+function buildHistory(trainingRows) {
+  const temperature = [];
+  const wind = [];
+  const rain = [];
+  
+  const now = new Date();
+  const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  
+  console.log(`[Build] Processing ${trainingRows.length} training rows`);
+  
+  for (const row of trainingRows) {
+    const targetTime = new Date(row.target_timestamp);
+    if (targetTime < sevenDaysAgo || targetTime > now) continue;
+    
+    if (row.actual_temp != null) {
+      temperature.push({
+        timestamp: row.target_timestamp,
+        dmiTemp: row.dmi_temperature_2m_pred ?? null,
+        mlTemp: row.ml_temp ?? null,
+        actualTemp: row.actual_temp ?? null,
+        verified: row.actual_temp != null,
+      });
+    }
+    
+    if (row.actual_wind_speed != null) {
+      wind.push({
+        timestamp: row.target_timestamp,
+        dmiWindSpeed: row.dmi_windspeed_10m_pred ?? null,
+        mlWindSpeed: row.ml_wind_speed ?? null,
+        actualWindSpeed: row.actual_wind_speed ?? null,
+        dmiWindGust: row.dmi_windgusts_10m_pred ?? null,
+        mlWindGust: row.ml_wind_gust ?? null,
+        actualWindGust: row.actual_wind_gust ?? null,
+        verified: row.actual_wind_speed != null,
+      });
+    }
+    
+    if (row.actual_precipitation != null) {
+      rain.push({
+        timestamp: row.target_timestamp,
+        dmiRainProb: row.dmi_precipitation_probability_pred ?? 0,
+        mlRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : 0,
+        actualRainEvent: row.actual_precipitation > 0.1 ? 1 : 0,
+        dmiRainAmount: row.dmi_precipitation_pred ?? 0,
+        mlRainAmount: row.ml_rain_amount ?? 0,
+        actualRainAmount: row.actual_precipitation ?? null,
+        verified: row.actual_precipitation != null,
+      });
+    }
+  }
+  
+  console.log(`[Build] History: ${temperature.length} temp, ${wind.length} wind, ${rain.length} rain`);
+  return { temperature, wind, rain };
+}
+
+function calculateMetrics(history) {
+  const tempVerified = history.temperature.filter(p => p.verified && p.actualTemp != null);
+  
+  if (tempVerified.length > 0) {
+    const dmiErrors = tempVerified.map(p => Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp)));
+    const mlErrors = tempVerified.map(p => Math.abs(p.actualTemp - (p.mlTemp ?? p.dmiTemp ?? p.actualTemp)));
+    
+    const dmiMae = dmiErrors.reduce((a, b) => a + b, 0) / dmiErrors.length;
+    const mlMae = mlErrors.reduce((a, b) => a + b, 0) / mlErrors.length;
+    
+    const dmiRmse = Math.sqrt(dmiErrors.map(e => e * e).reduce((a, b) => a + b, 0) / dmiErrors.length);
+    const mlRmse = Math.sqrt(mlErrors.map(e => e * e).reduce((a, b) => a + b, 0) / mlErrors.length);
+    
+    return {
+      target: "temperature",
+      periodLabel: `Seneste 7 dage (${tempVerified.length} punkter)`,
+      rmseDmi: dmiRmse,
+      rmseMl: mlRmse,
+      maeDmi: dmiMae,
+      maeMl: mlMae,
+      winRate: tempVerified.filter(p => {
+        const dmiErr = Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp));
+        const mlErr = Math.abs(p.actualTemp - (p.mlTemp ?? p.dmiTemp ?? p.actualTemp));
+        return mlErr < dmiErr;
+      }).length / tempVerified.length * 100,
+      totalPredictions: tempVerified.length,
+    };
+  }
   
   return {
-    location: {
-      name: "Aarhus",
-      timezone: "Europe/Copenhagen",
-    },
-    generatedAt: new Date().toISOString(),
-    targetLabels: {
-      temperature: "Temperatur",
-      wind_speed: "Vindhastighed",
-      wind_gust: "Vindstød",
-      rain_event: "Regnrisiko",
-      rain_amount: "Regnmængde",
-    },
-    explanations: {
-      forecast: "DMI's prognose vises sammen med vores ML-justering, når den er tilgængelig.",
-      performance: "Se hvordan DMI og ML har klaret sig mod det faktiske vejr de seneste 7 dage.",
-      sources: "DMI er grundprognosen. ML er vores lokale justering baseret på historiske data.",
-    },
-    targetStatus: {
-      temperature: {
-        hasActiveModel: false,
-        activeBuckets: [],
-        statusLabel: "DMI-prognose",
-        statusDescription: "Viser DMI's temperaturprognose direkte. ML-model er under træning."
-      },
-      wind_speed: {
-        hasActiveModel: false,
-        activeBuckets: [],
-        statusLabel: "DMI-prognose",
-        statusDescription: "Viser DMI's vindprognose direkte. ML-model er under træning."
-      },
-      wind_gust: {
-        hasActiveModel: false,
-        activeBuckets: [],
-        statusLabel: "DMI-prognose",
-        statusDescription: "Viser DMI's vindstødsprognose direkte. ML-model er under træning."
-      },
-      rain_event: {
-        hasActiveModel: false,
-        activeBuckets: [],
-        statusLabel: "DMI-prognose",
-        statusDescription: "Viser DMI's regnsandsynlighed direkte. ML-model er under træning."
-      },
-      rain_amount: {
-        hasActiveModel: false,
-        activeBuckets: [],
-        statusLabel: "DMI-prognose",
-        statusDescription: "Viser DMI's regnmængde direkte. ML-model er under træning."
-      },
-    },
-    current: {
-      timestamp: current.timestamp,
-      temp: current.effectiveTemp,
-      dmiTemp: current.dmiTemp,
-      mlTemp: current.mlTemp,
-      tempSource: "dmi",
-      apparentTemp: current.apparentTemp,
-      windSpeed: current.effectiveWindSpeed,
-      dmiWindSpeed: current.dmiWindSpeed,
-      mlWindSpeed: current.mlWindSpeed,
-      windSpeedSource: "dmi",
-      windGust: current.effectiveWindGust,
-      dmiWindGust: current.dmiWindGust,
-      mlWindGust: current.mlWindGust,
-      windGustSource: "dmi",
-      windDirection: current.windDirection,
-      rainProb: current.effectiveRainProb,
-      dmiRainProb: current.dmiRainProb,
-      mlRainProb: current.mlRainProb,
-      rainProbSource: "dmi",
-      rainAmount: current.effectiveRainAmount,
-      dmiRainAmount: current.dmiRainAmount,
-      mlRainAmount: current.mlRainAmount,
-      rainAmountSource: "dmi",
-      humidity: current.humidity,
-      pressure: current.pressure,
-      cloudCover: current.cloudCover,
-      weatherCode: current.weatherCode,
-    },
-    forecast,
-    history: {
-      temperature: [],
-      wind: [],
-      rain: [],
-    },
-    verification: {
-      target: "temperature",
-      periodLabel: "Ingen verificeret historik endnu",
-      rmseDmi: null,
-      rmseMl: null,
-      maeDmi: null,
-      maeMl: null,
-      winRate: null,
-      totalPredictions: 0,
-    },
-    leadBuckets: [],
-    featureImportance: [],
-    modelInfo: {
-      trainedAt: null,
-      trainingSamples: null,
-      targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
-      registryGeneratedAt: null,
-    },
-    alerts: [{
-      type: "info",
-      severity: "info",
-      title: "ML-modeller under udvikling",
-      message: "Vi træner stadig ML-modellerne. Indtil videre vises DMI's prognoser direkte.",
-    }],
+    target: "temperature",
+    periodLabel: "Ingen verificeret historik endnu",
+    rmseDmi: null,
+    rmseMl: null,
+    maeDmi: null,
+    maeMl: null,
+    winRate: null,
+    totalPredictions: 0,
   };
+}
+
+function buildCurrentWeather(forecast) {
+  if (!forecast || forecast.length === 0) return null;
+  
+  const current = forecast[0];
+  return {
+    timestamp: current.timestamp,
+    temp: current.effectiveTemp,
+    dmiTemp: current.dmiTemp,
+    mlTemp: current.mlTemp,
+    tempSource: current.effectiveTempSource,
+    apparentTemp: current.apparentTemp,
+    windSpeed: current.effectiveWindSpeed,
+    dmiWindSpeed: current.dmiWindSpeed,
+    mlWindSpeed: current.mlWindSpeed,
+    windSpeedSource: current.effectiveWindSpeedSource,
+    windGust: current.effectiveWindGust,
+    dmiWindGust: current.dmiWindGust,
+    mlWindGust: current.mlWindGust,
+    windGustSource: current.effectiveWindGustSource,
+    windDirection: current.windDirection,
+    rainProb: current.effectiveRainProb,
+    dmiRainProb: current.dmiRainProb,
+    mlRainProb: current.mlRainProb,
+    rainProbSource: current.effectiveRainProbSource,
+    rainAmount: current.effectiveRainAmount,
+    dmiRainAmount: current.dmiRainAmount,
+    mlRainAmount: current.mlRainAmount,
+    rainAmountSource: current.effectiveRainAmountSource,
+    humidity: current.humidity,
+    pressure: current.pressure,
+    cloudCover: current.cloudCover,
+    weatherCode: current.weatherCode,
+  };
+}
+
+function checkMlActive(forecast, field) {
+  return forecast.some(f => f[field] != null);
 }
 
 export default async function handler(req, res) {
@@ -250,7 +234,6 @@ export default async function handler(req, res) {
   
   // Check cache
   if (cache.data && cache.expiresAt > now) {
-    console.log("[Dashboard] Returning cached data");
     return res.status(200).json({
       snapshot: cache.data,
       stale: false,
@@ -260,45 +243,105 @@ export default async function handler(req, res) {
   }
   
   try {
-    // Prøv at hente fra HF Space
-    console.log("[Dashboard] Attempting to fetch from HF Space...");
-    let data;
+    console.log("[Dashboard] Starting data fetch...");
     
-    try {
-      const spaceResult = await fetchFromHFSpace();
-      // Hvis vi fik data fra space, konverter det
-      // TODO: Parse space result
-      console.log("[Dashboard] Space data received (not implemented yet)");
-      throw new Error("Space parsing not implemented");
-    } catch (spaceError) {
-      console.log(`[Dashboard] Space fetch failed: ${spaceError.message}`);
-      
-      // Prøv at hente parquet direkte
-      try {
-        const parquetInfo = await fetchParquetDirect();
-        console.log("[Dashboard] Parquet info:", parquetInfo);
-        
-        // Vi har filerne men kan ikke parse dem uden en parquet parser
-        // Brug mock data indtil videre
-        data = generateMockData();
-        data._debug = {
-          parquetSize: parquetInfo.predictionsSize,
-          message: "Parquet files fetched but parsing not implemented",
-        };
-      } catch (parquetError) {
-        console.log(`[Dashboard] Parquet fetch failed: ${parquetError.message}`);
-        
-        // Fallback til mock data
-        data = generateMockData();
-        data._debug = {
-          error: "All fetch methods failed",
-          spaceError: spaceError.message,
-          parquetError: parquetError.message,
-        };
-      }
-    }
+    // Fetch both parquet files
+    const [predictionsBuffer, trainingBuffer] = await Promise.all([
+      fetchParquetBuffer(HF_DATASET_PREDICTIONS, "predictions_latest.parquet"),
+      fetchParquetBuffer(HF_DATASET_WEATHER, "training_matrix.parquet").catch(() => null),
+    ]);
     
-    // Cache resultatet
+    // Parse parquet files
+    const predictionsRows = await parseParquet(predictionsBuffer);
+    const trainingRows = trainingBuffer ? await parseParquet(trainingBuffer) : [];
+    
+    console.log(`[Dashboard] Parsed ${predictionsRows.length} predictions, ${trainingRows.length} training rows`);
+    
+    // Build dashboard data
+    const forecast = buildForecast(predictionsRows);
+    const history = buildHistory(trainingRows);
+    const current = buildCurrentWeather(forecast);
+    const verification = calculateMetrics(history);
+    
+    const hasMlTemp = checkMlActive(forecast, "mlTemp");
+    const hasMlWindSpeed = checkMlActive(forecast, "mlWindSpeed");
+    const hasMlWindGust = checkMlActive(forecast, "mlWindGust");
+    const hasMlRainProb = checkMlActive(forecast, "mlRainProb");
+    const hasMlRainAmount = checkMlActive(forecast, "mlRainAmount");
+    
+    const data = {
+      location: { name: "Aarhus", timezone: "Europe/Copenhagen" },
+      generatedAt: new Date().toISOString(),
+      targetLabels: {
+        temperature: "Temperatur",
+        wind_speed: "Vindhastighed",
+        wind_gust: "Vindstød",
+        rain_event: "Regnrisiko",
+        rain_amount: "Regnmængde",
+      },
+      explanations: {
+        forecast: "DMI's prognose vises sammen med vores ML-justering, når den er tilgængelig.",
+        performance: "Se hvordan DMI og ML har klaret sig mod det faktiske vejr de seneste 7 dage.",
+        sources: "DMI er grundprognosen. ML er vores lokale justering baseret på historiske data.",
+      },
+      targetStatus: {
+        temperature: {
+          hasActiveModel: hasMlTemp,
+          activeBuckets: hasMlTemp ? ["1-6", "7-12", "13-24", "25-48"] : [],
+          statusLabel: hasMlTemp ? "ML aktiv" : "DMI-prognose",
+          statusDescription: hasMlTemp 
+            ? "Vores ML-model justerer DMI's temperaturprognose."
+            : "Viser DMI's prognose direkte. ML er under træning."
+        },
+        wind_speed: {
+          hasActiveModel: hasMlWindSpeed,
+          activeBuckets: hasMlWindSpeed ? ["1-6", "7-12", "13-24", "25-48"] : [],
+          statusLabel: hasMlWindSpeed ? "ML aktiv" : "DMI-prognose",
+          statusDescription: hasMlWindSpeed
+            ? "Vores ML-model justerer vindhastighed."
+            : "Viser DMI's vindprognose direkte. ML er under træning."
+        },
+        wind_gust: {
+          hasActiveModel: hasMlWindGust,
+          activeBuckets: hasMlWindGust ? ["1-6", "7-12", "13-24", "25-48"] : [],
+          statusLabel: hasMlWindGust ? "ML aktiv" : "DMI-prognose",
+          statusDescription: hasMlWindGust
+            ? "Vores ML-model forudsiger vindstød."
+            : "Viser DMI's vindstødsprognose direkte. ML er under træning."
+        },
+        rain_event: {
+          hasActiveModel: hasMlRainProb,
+          activeBuckets: hasMlRainProb ? ["1-6", "7-12", "13-24", "25-48"] : [],
+          statusLabel: hasMlRainProb ? "ML aktiv" : "DMI-prognose",
+          statusDescription: hasMlRainProb
+            ? "Vores ML-model beregner regnsandsynlighed."
+            : "Viser DMI's regnsandsynlighed direkte. ML er under træning."
+        },
+        rain_amount: {
+          hasActiveModel: hasMlRainAmount,
+          activeBuckets: hasMlRainAmount ? ["1-6", "7-12", "13-24", "25-48"] : [],
+          statusLabel: hasMlRainAmount ? "ML aktiv" : "DMI-prognose",
+          statusDescription: hasMlRainAmount
+            ? "Vores ML-model estimerer regnmængde."
+            : "Viser DMI's regnmængde direkte. ML er under træning."
+        },
+      },
+      current,
+      forecast,
+      history,
+      verification,
+      leadBuckets: [],
+      featureImportance: [],
+      modelInfo: {
+        trainedAt: null,
+        trainingSamples: null,
+        targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
+        registryGeneratedAt: null,
+      },
+      alerts: [],
+    };
+    
+    // Cache the result
     cache = {
       data,
       fetchedAt: new Date().toISOString(),
@@ -309,20 +352,14 @@ export default async function handler(req, res) {
       snapshot: data,
       stale: false,
       fetchedAt: cache.fetchedAt,
-      source: "mock", // Ændres når rigtig data er tilgængelig
+      source: "huggingface",
     });
   } catch (error) {
-    console.error("[Dashboard] Fatal error:", error);
+    console.error("[Dashboard] Error:", error);
     
-    // Returnér mock data ved fejl
-    const mockData = generateMockData();
-    
-    return res.status(200).json({
-      snapshot: mockData,
-      stale: true,
-      fetchedAt: new Date().toISOString(),
-      source: "mock-error",
-      error: error instanceof Error ? error.message : "Unknown error",
+    return res.status(503).json({
+      error: error instanceof Error ? error.message : "Failed to fetch data",
+      details: "Check Vercel logs for more information",
     });
   }
 }
