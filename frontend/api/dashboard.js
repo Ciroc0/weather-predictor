@@ -1,5 +1,4 @@
-const parquet = require('parquetjs-lite');
-
+// Use HF Datasets Server API to get data as JSON instead of parsing parquet
 const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
 const HF_TOKEN = process.env.HF_TOKEN;
@@ -11,31 +10,59 @@ let cache = {
   fetchedAt: null,
 };
 
-// Parse parquet buffer to array of objects
-async function parseParquet(buffer) {
-  const reader = new parquet.ParquetReader();
-  await reader.openBuffer(buffer);
-  
-  const rows = [];
-  const cursor = reader.getCursor();
-  let record = await cursor.next();
-  
-  while (record) {
-    rows.push(record);
-    record = await cursor.next();
+async function fetchDatasetFromHF(dataset, config, split) {
+  // Use HF datasets-server API to get data as JSON
+  const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=${config}&split=${split}&offset=0&length=100`;
+  const headers = {};
+  if (HF_TOKEN) {
+    headers.Authorization = `Bearer ${HF_TOKEN}`;
   }
   
-  await reader.close();
-  return rows;
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${dataset}: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.rows.map(r => r.row);
 }
 
-// Map parquet data to frontend format
+async function fetchAllRows(dataset, config, split) {
+  const allRows = [];
+  let offset = 0;
+  const length = 100;
+  
+  while (true) {
+    const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=${config}&split=${split}&offset=${offset}&length=${length}`;
+    const headers = {};
+    if (HF_TOKEN) {
+      headers.Authorization = `Bearer ${HF_TOKEN}`;
+    }
+    
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      if (response.status === 404) break; // No more data
+      throw new Error(`Failed to fetch ${dataset}: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.rows || data.rows.length === 0) break;
+    
+    allRows.push(...data.rows.map(r => r.row));
+    offset += length;
+    
+    // Safety limit
+    if (offset > 10000) break;
+  }
+  
+  return allRows;
+}
+
 function buildForecast(predictionsRows) {
   const forecast = [];
   const now = new Date();
   
   for (const row of predictionsRows) {
-    // Only include future predictions
     const targetTime = new Date(row.target_timestamp);
     if (targetTime <= now) continue;
     
@@ -87,18 +114,17 @@ function buildHistory(trainingRows) {
     const targetTime = new Date(row.target_timestamp);
     if (targetTime < sevenDaysAgo || targetTime > now) continue;
     
-    // Only include rows with actual data
-    if (row.actual_temp !== null && row.actual_temp !== undefined) {
+    if (row.actual_temp != null) {
       temperature.push({
         timestamp: row.target_timestamp,
         dmiTemp: row.dmi_temperature_2m_pred ?? null,
         mlTemp: row.ml_temp ?? null,
         actualTemp: row.actual_temp ?? null,
-        verified: row.actual_temp !== null,
+        verified: row.actual_temp != null,
       });
     }
     
-    if (row.actual_wind_speed !== null && row.actual_wind_speed !== undefined) {
+    if (row.actual_wind_speed != null) {
       wind.push({
         timestamp: row.target_timestamp,
         dmiWindSpeed: row.dmi_windspeed_10m_pred ?? null,
@@ -107,11 +133,11 @@ function buildHistory(trainingRows) {
         dmiWindGust: row.dmi_windgusts_10m_pred ?? null,
         mlWindGust: row.ml_wind_gust ?? null,
         actualWindGust: row.actual_wind_gust ?? null,
-        verified: row.actual_wind_speed !== null,
+        verified: row.actual_wind_speed != null,
       });
     }
     
-    if (row.actual_precipitation !== null && row.actual_precipitation !== undefined) {
+    if (row.actual_precipitation != null) {
       rain.push({
         timestamp: row.target_timestamp,
         dmiRainProb: row.dmi_precipitation_probability_pred ?? 0,
@@ -120,7 +146,7 @@ function buildHistory(trainingRows) {
         dmiRainAmount: row.dmi_precipitation_pred ?? 0,
         mlRainAmount: row.ml_rain_amount ?? 0,
         actualRainAmount: row.actual_precipitation ?? null,
-        verified: row.actual_precipitation !== null,
+        verified: row.actual_precipitation != null,
       });
     }
   }
@@ -129,9 +155,7 @@ function buildHistory(trainingRows) {
 }
 
 function calculateMetrics(history) {
-  // Temperature metrics
-  const tempVerified = history.temperature.filter(p => p.verified && p.actualTemp !== null);
-  let tempMetrics = null;
+  const tempVerified = history.temperature.filter(p => p.verified && p.actualTemp != null);
   
   if (tempVerified.length > 0) {
     const dmiErrors = tempVerified.map(p => Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp)));
@@ -143,7 +167,7 @@ function calculateMetrics(history) {
     const dmiRmse = Math.sqrt(dmiErrors.map(e => e * e).reduce((a, b) => a + b, 0) / dmiErrors.length);
     const mlRmse = Math.sqrt(mlErrors.map(e => e * e).reduce((a, b) => a + b, 0) / mlErrors.length);
     
-    tempMetrics = {
+    return {
       target: "temperature",
       periodLabel: `Seneste 7 dage (${tempVerified.length} punkter)`,
       rmseDmi: dmiRmse,
@@ -159,7 +183,7 @@ function calculateMetrics(history) {
     };
   }
   
-  return tempMetrics || {
+  return {
     target: "temperature",
     periodLabel: "Ingen verificeret historik endnu",
     rmseDmi: null,
@@ -215,7 +239,6 @@ function buildLeadBuckets(history) {
     { name: "25-48", min: 25, max: 48, label: "25-48 timer frem" },
   ];
   
-  // Group temperature predictions by lead time
   const tempByBucket = {};
   for (const bucket of bucketDefs) {
     tempByBucket[bucket.name] = [];
@@ -252,36 +275,14 @@ function buildLeadBuckets(history) {
 }
 
 function checkMlActive(forecast, field) {
-  return forecast.some(f => f[field] !== null && f[field] !== undefined);
-}
-
-async function fetchParquetFromHF(dataset, file) {
-  const url = `https://huggingface.co/datasets/${dataset}/resolve/main/${file}?download=true`;
-  const headers = {};
-  if (HF_TOKEN) {
-    headers.Authorization = `Bearer ${HF_TOKEN}`;
-  }
-  
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${file}: ${response.status}`);
-  }
-  
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return forecast.some(f => f[field] != null);
 }
 
 async function buildDashboardData() {
-  // Fetch both datasets in parallel
-  const [predictionsBuffer, trainingBuffer] = await Promise.all([
-    fetchParquetFromHF(HF_DATASET_PREDICTIONS, "predictions_latest.parquet"),
-    fetchParquetFromHF(HF_DATASET_WEATHER, "training_matrix.parquet"),
-  ]);
-  
-  // Parse parquet files
+  // Fetch data from HF datasets-server API (returns JSON directly)
   const [predictionsRows, trainingRows] = await Promise.all([
-    parseParquet(predictionsBuffer),
-    parseParquet(trainingBuffer),
+    fetchDatasetFromHF(HF_DATASET_PREDICTIONS, "default", "train").catch(() => []),
+    fetchAllRows(HF_DATASET_WEATHER, "default", "train").catch(() => []),
   ]);
   
   const forecast = buildForecast(predictionsRows);
@@ -290,7 +291,6 @@ async function buildDashboardData() {
   const verification = calculateMetrics(history);
   const leadBuckets = buildLeadBuckets(history);
   
-  // Check which ML models are active
   const hasMlTemp = checkMlActive(forecast, "mlTemp");
   const hasMlWindSpeed = checkMlActive(forecast, "mlWindSpeed");
   const hasMlWindGust = checkMlActive(forecast, "mlWindGust");
@@ -362,21 +362,20 @@ async function buildDashboardData() {
     history,
     verification,
     leadBuckets,
-    featureImportance: [], // Would need model metadata for this
+    featureImportance: [],
     modelInfo: {
-      trainedAt: null, // Would need to fetch from model_registry.json
+      trainedAt: null,
       trainingSamples: null,
       targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
       registryGeneratedAt: null,
     },
-    alerts: [], // Could add weather alerts based on conditions
+    alerts: [],
   };
 }
 
-module.exports = async function handler(_req, res) {
+export default async function handler(req, res) {
   const now = Date.now();
   
-  // Check cache
   if (cache.data && cache.expiresAt > now) {
     return res.status(200).json({
       snapshot: cache.data,
@@ -404,7 +403,6 @@ module.exports = async function handler(_req, res) {
   } catch (error) {
     console.error("Dashboard error:", error);
     
-    // Return stale cache if available
     if (cache.data) {
       return res.status(200).json({
         snapshot: cache.data,
@@ -419,4 +417,4 @@ module.exports = async function handler(_req, res) {
       error: error instanceof Error ? error.message : "Failed to fetch data from Hugging Face",
     });
   }
-};
+}
