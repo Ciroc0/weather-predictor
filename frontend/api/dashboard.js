@@ -1,5 +1,4 @@
-import { parquetRead } from 'hyparquet';
-
+// Use HF Datasets Server API to get data as JSON
 const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
 const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_TOKEN = process.env.HF_TOKEN;
@@ -11,46 +10,52 @@ let cache = {
   fetchedAt: null,
 };
 
-async function fetchParquetBuffer(dataset, file) {
-  const url = `https://huggingface.co/datasets/${dataset}/resolve/main/${file}?download=true`;
-  const headers = {};
+async function fetchRowsFromHF(dataset, split = "train", offset = 0, length = 100) {
+  // Use HF datasets-server API
+  const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=default&split=${split}&offset=${offset}&length=${length}`;
   
+  const headers = {};
   if (HF_TOKEN) {
     headers.Authorization = `Bearer ${HF_TOKEN}`;
   }
   
-  console.log(`[HF] Fetching: ${url}`);
+  console.log(`[HF API] Fetching: ${url}`);
   
-  const response = await fetch(url, { headers, redirect: "follow" });
+  const response = await fetch(url, { headers });
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${file}: ${response.status}`);
+    const text = await response.text();
+    console.error(`[HF API] Error ${response.status}:`, text.substring(0, 500));
+    throw new Error(`Failed to fetch ${dataset}: ${response.status}`);
   }
   
-  const buffer = await response.arrayBuffer();
-  console.log(`[HF] Got ${file}: ${buffer.byteLength} bytes`);
+  const data = await response.json();
+  console.log(`[HF API] Got ${data.rows?.length || 0} rows`);
   
-  return buffer;
+  // Return rows with their data
+  return data.rows?.map(r => r.row) || [];
 }
 
-async function parseParquet(buffer) {
-  const rows = [];
-  let schema = null;
+async function fetchAllRowsFromHF(dataset, split = "train") {
+  const allRows = [];
+  let offset = 0;
+  const length = 100;
+  const maxRows = 5000; // Safety limit
   
-  await parquetRead({
-    file: buffer,
-    onComplete: (data) => {
-      rows.push(...data);
-    },
-  });
-  
-  // Log first row to see column names
-  if (rows.length > 0) {
-    console.log("[Parse] First row keys:", Object.keys(rows[0]));
-    console.log("[Parse] Sample row:", JSON.stringify(rows[0]).substring(0, 500));
+  while (allRows.length < maxRows) {
+    const rows = await fetchRowsFromHF(dataset, split, offset, length);
+    
+    if (!rows || rows.length === 0) break;
+    
+    allRows.push(...rows);
+    offset += length;
+    
+    // For predictions, we only need future data (~48 rows)
+    if (dataset === HF_DATASET_PREDICTIONS && allRows.length >= 200) break;
   }
   
-  return rows;
+  console.log(`[HF API] Total rows from ${dataset}: ${allRows.length}`);
+  return allRows;
 }
 
 function buildForecast(predictionsRows) {
@@ -59,12 +64,9 @@ function buildForecast(predictionsRows) {
   
   console.log(`[Build] Processing ${predictionsRows.length} prediction rows`);
   
-  // Debug: check first row
+  // Debug: log first row
   if (predictionsRows.length > 0) {
-    const firstRow = predictionsRows[0];
-    console.log("[Build] First row target_timestamp:", firstRow.target_timestamp);
-    console.log("[Build] First row dmi_temperature_2m_pred:", firstRow.dmi_temperature_2m_pred);
-    console.log("[Build] First row ml_temp:", firstRow.ml_temp);
+    console.log("[Build] First row:", JSON.stringify(predictionsRows[0]).substring(0, 300));
   }
   
   for (const row of predictionsRows) {
@@ -249,6 +251,7 @@ export default async function handler(req, res) {
   
   // Check cache
   if (cache.data && cache.expiresAt > now) {
+    console.log("[Dashboard] Returning cached data");
     return res.status(200).json({
       snapshot: cache.data,
       stale: false,
@@ -258,19 +261,21 @@ export default async function handler(req, res) {
   }
   
   try {
-    console.log("[Dashboard] Starting data fetch...");
+    console.log("[Dashboard] Starting data fetch from HF API...");
     
-    // Fetch both parquet files
-    const [predictionsBuffer, trainingBuffer] = await Promise.all([
-      fetchParquetBuffer(HF_DATASET_PREDICTIONS, "predictions_latest.parquet"),
-      fetchParquetBuffer(HF_DATASET_WEATHER, "training_matrix.parquet").catch(() => null),
+    // Fetch data from HF datasets-server API
+    const [predictionsRows, trainingRows] = await Promise.all([
+      fetchAllRowsFromHF(HF_DATASET_PREDICTIONS, "train").catch(e => {
+        console.error("[Dashboard] Predictions fetch failed:", e.message);
+        return [];
+      }),
+      fetchAllRowsFromHF(HF_DATASET_WEATHER, "train").catch(e => {
+        console.error("[Dashboard] Training fetch failed:", e.message);
+        return [];
+      }),
     ]);
     
-    // Parse parquet files
-    const predictionsRows = await parseParquet(predictionsBuffer);
-    const trainingRows = trainingBuffer ? await parseParquet(trainingBuffer) : [];
-    
-    console.log(`[Dashboard] Parsed ${predictionsRows.length} predictions, ${trainingRows.length} training rows`);
+    console.log(`[Dashboard] Got ${predictionsRows.length} predictions, ${trainingRows.length} training rows`);
     
     // Build dashboard data
     const forecast = buildForecast(predictionsRows);
@@ -363,6 +368,8 @@ export default async function handler(req, res) {
       expiresAt: now + CACHE_TTL_MS,
     };
     
+    console.log("[Dashboard] Data built successfully");
+    
     return res.status(200).json({
       snapshot: data,
       stale: false,
@@ -370,7 +377,7 @@ export default async function handler(req, res) {
       source: "huggingface",
     });
   } catch (error) {
-    console.error("[Dashboard] Error:", error);
+    console.error("[Dashboard] Fatal error:", error);
     
     return res.status(503).json({
       error: error instanceof Error ? error.message : "Failed to fetch data",
