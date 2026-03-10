@@ -50,7 +50,7 @@ export function HomePage() {
                   <Icon className="h-5 w-5 text-slate-500" />
                 </CardHeader>
                 <CardContent className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                  <span>Se baade DMI og ML, og faa forklaret hvad forskellen betyder.</span>
+                  <span>Se både DMI og ML, og få forklaret hvad forskellen betyder.</span>
                   <ArrowRight className="h-4 w-4 flex-none" />
                 </CardContent>
               </Card>
@@ -63,7 +63,7 @@ export function HomePage() {
         <Card className="border-slate-200 dark:border-slate-800">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle>Naeste 12 timer</CardTitle>
+              <CardTitle>Næste 12 timer</CardTitle>
               <Badge variant="secondary">{getTemperatureImprovementText(snapshot.verification)}</Badge>
             </div>
           </CardHeader>
