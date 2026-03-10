@@ -8,6 +8,7 @@ import {
   Cpu,
   Target,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Bar,
@@ -19,6 +20,8 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Area,
+  AreaChart,
 } from "recharts";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,6 +112,91 @@ function HistoryTooltip({
   );
 }
 
+function ErrorTooltip({
+  active,
+  payload,
+  label,
+  suffix = "",
+}: {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+  suffix?: string;
+}) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+      <p className="mb-2 font-medium">{label}</p>
+      {payload.map((entry) => (
+        <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
+          <span className="font-semibold">
+            {entry.value.toFixed(2)}
+            {suffix}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Calculate absolute errors for each data point
+function calculateErrors(
+  history: DashboardHistory,
+  section: PerformanceSection
+): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
+  if (section === "temperature") {
+    return history.temperature
+      .filter((p) => p.actualTemp !== null)
+      .map((p) => ({
+        time: formatShortDate(p.timestamp),
+        dmiError: p.dmiTemp !== null ? Math.abs(p.dmiTemp - (p.actualTemp ?? 0)) : null,
+        mlError: p.mlTemp !== null ? Math.abs(p.mlTemp - (p.actualTemp ?? 0)) : null,
+      }));
+  }
+  if (section === "wind") {
+    return history.wind
+      .filter((p) => p.actualWindSpeed !== null)
+      .map((p) => ({
+        time: formatShortDate(p.timestamp),
+        dmiError: p.dmiWindSpeed !== null ? Math.abs(p.dmiWindSpeed - (p.actualWindSpeed ?? 0)) : null,
+        mlError: p.mlWindSpeed !== null ? Math.abs(p.mlWindSpeed - (p.actualWindSpeed ?? 0)) : null,
+      }));
+  }
+  // rain - use rain_amount for error calculation
+  return history.rain
+    .filter((p) => p.actualRainAmount !== null)
+    .map((p) => ({
+      time: formatShortDate(p.timestamp),
+      dmiError: p.dmiRainAmount !== null ? Math.abs(p.dmiRainAmount - (p.actualRainAmount ?? 0)) : null,
+      mlError: p.mlRainAmount !== null ? Math.abs(p.mlRainAmount - (p.actualRainAmount ?? 0)) : null,
+    }));
+}
+
+function calculateGustErrors(history: DashboardHistory): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
+  return history.wind
+    .filter((p) => p.actualWindGust !== null)
+    .map((p) => ({
+      time: formatShortDate(p.timestamp),
+      dmiError: p.dmiWindGust !== null ? Math.abs(p.dmiWindGust - (p.actualWindGust ?? 0)) : null,
+      mlError: p.mlWindGust !== null ? Math.abs(p.mlWindGust - (p.actualWindGust ?? 0)) : null,
+    }));
+}
+
+function calculateRainProbErrors(history: DashboardHistory): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
+  return history.rain
+    .filter((p) => p.actualRainEvent !== null)
+    .map((p) => ({
+      time: formatShortDate(p.timestamp),
+      dmiError: p.dmiRainProb !== null ? Math.abs(p.dmiRainProb - (p.actualRainEvent ?? 0) * 100) : null,
+      mlError: p.mlRainProb !== null ? Math.abs(p.mlRainProb - (p.actualRainEvent ?? 0) * 100) : null,
+    }));
+}
+
 export function PerformanceTab({
   verification,
   leadBuckets,
@@ -151,30 +239,39 @@ export function PerformanceTab({
     status: targetStatus[target],
   }));
 
+  // Calculate errors for current section
+  const errorData = useMemo(() => calculateErrors(history, section), [history, section]);
+  const gustErrorData = useMemo(() => calculateGustErrors(history), [history]);
+  const rainProbErrorData = useMemo(() => calculateRainProbErrors(history), [history]);
+
+  const hasErrorData = errorData.some((d) => d.dmiError !== null || d.mlError !== null);
+  const hasGustErrorData = gustErrorData.some((d) => d.dmiError !== null || d.mlError !== null);
+  const hasRainProbErrorData = rainProbErrorData.some((d) => d.dmiError !== null || d.mlError !== null);
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <Card className="border-slate-200 dark:border-slate-800">
         <CardHeader>
-          <CardTitle>Saadan laeser du siden</CardTitle>
+          <CardTitle>Sådan læser du siden</CardTitle>
           <CardDescription>{explanations.performance}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
             <p className="text-sm font-medium">DMI-prognose</p>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Den raa prognose, som alle sammenligninger starter fra.
+              Den rå prognose, som alle sammenligninger starter fra.
             </p>
           </div>
           <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
             <p className="text-sm font-medium">ML-prognose</p>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Vores justerede bud for Aarhus, naar der er en aktiv model.
+              Vores justerede bud for Aarhus, når der er en aktiv model.
             </p>
           </div>
           <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
             <p className="text-sm font-medium">Faktisk vejr</p>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Det vejr, der senere blev maalt og brugt til at verificere prognoserne.
+              Det vejr, der senere blev målt og brugt til at verificere prognoserne.
             </p>
           </div>
         </CardContent>
@@ -261,6 +358,7 @@ export function PerformanceTab({
         ))}
       </div>
 
+      {/* Value Comparison Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -336,9 +434,9 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI vindstoed" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML vindstoed" stroke="#ef4444" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vindstoed" stroke="#111827" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI vindstød" stroke="#64748b" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="ml" name="ML vindstød" stroke="#ef4444" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#111827" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -385,15 +483,208 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip content={<HistoryTooltip suffix=" mm" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI regnmaengde" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML regnmaengde" stroke="#0ea5e9" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regnmaengde" stroke="#111827" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI regnmængde" stroke="#64748b" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="ml" name="ML regnmængde" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#111827" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">Ingen verificeret regnhistorik endnu.</p>
+            )
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Error Analysis Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-slate-500" />
+            Fejlanalyse: {sectionLabels[section]}
+          </CardTitle>
+          <CardDescription>
+            Viser absolutte fejl for DMI og ML prognoser sammenlignet med faktisk vejr. Lavere er bedre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {section === "temperature" ? (
+            hasErrorData ? (
+              <div className="h-[320px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={errorData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip content={<ErrorTooltip suffix="°C" />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="dmiError" 
+                      name="DMI fejl" 
+                      stroke="#64748b" 
+                      fill="#64748b"
+                      fillOpacity={0.3}
+                      strokeWidth={2} 
+                      dot={false} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="mlError" 
+                      name="ML fejl" 
+                      stroke="#10b981" 
+                      fill="#10b981"
+                      fillOpacity={0.3}
+                      strokeWidth={2} 
+                      dot={false} 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
+            )
+          ) : null}
+
+          {section === "wind" ? (
+            hasErrorData || hasGustErrorData ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="h-[280px] w-full">
+                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vindhastighed fejl</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={errorData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="dmiError" 
+                        name="DMI fejl" 
+                        stroke="#64748b" 
+                        fill="#64748b"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="mlError" 
+                        name="ML fejl" 
+                        stroke="#10b981" 
+                        fill="#10b981"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="h-[280px] w-full">
+                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vindstød fejl</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={gustErrorData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="dmiError" 
+                        name="DMI fejl" 
+                        stroke="#64748b" 
+                        fill="#64748b"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="mlError" 
+                        name="ML fejl" 
+                        stroke="#ef4444" 
+                        fill="#ef4444"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
+            )
+          ) : null}
+
+          {section === "rain" ? (
+            hasRainProbErrorData || hasErrorData ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="h-[280px] w-full">
+                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Regnrisiko fejl (%-point)</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={rainProbErrorData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                      <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                      <Tooltip content={<ErrorTooltip suffix="%" />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="dmiError" 
+                        name="DMI fejl" 
+                        stroke="#64748b" 
+                        fill="#64748b"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="mlError" 
+                        name="ML fejl" 
+                        stroke="#10b981" 
+                        fill="#10b981"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="h-[280px] w-full">
+                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Regnmængde fejl</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={errorData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<ErrorTooltip suffix=" mm" />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="dmiError" 
+                        name="DMI fejl" 
+                        stroke="#64748b" 
+                        fill="#64748b"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="mlError" 
+                        name="ML fejl" 
+                        stroke="#0ea5e9" 
+                        fill="#0ea5e9"
+                        fillOpacity={0.3}
+                        strokeWidth={2} 
+                        dot={false} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
             )
           ) : null}
         </CardContent>
@@ -450,7 +741,7 @@ export function PerformanceTab({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Cpu className="h-4 w-4 text-slate-500" />
-              Hvad modellen laegger vaegt paa
+              Hvad modellen lægger vægt på
             </CardTitle>
             <CardDescription>
               Det som modellen lægger mest vægt på i sine beregninger.
@@ -477,7 +768,7 @@ export function PerformanceTab({
               ))
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Feature importance er ikke tilgaengelig for dette signal endnu.
+                Feature importance er ikke tilgængelig for dette signal endnu.
               </p>
             )}
           </CardContent>
@@ -494,14 +785,14 @@ export function PerformanceTab({
             <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/50">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-slate-500" />
-                <span className="text-sm text-slate-600 dark:text-slate-400">Sidste traening</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">Sidste træning</span>
               </div>
               <span className="text-sm font-medium">
                 {modelInfo.trainedAt ? formatDanishDateTime(modelInfo.trainedAt) : "Ukendt"}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/50">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Traeningssamples</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">Træningssamples</span>
               <span className="text-sm font-medium">
                 {modelInfo.trainingSamples !== null ? modelInfo.trainingSamples.toLocaleString("da-DK") : "Ukendt"}
               </span>
@@ -535,7 +826,7 @@ export function PerformanceTab({
           </div>
           <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
             {verification.winRate !== null
-              ? `ML var taettest paa virkeligheden i ${verification.winRate.toFixed(0)}% af temperaturpunkterne`
+              ? `ML var tættest på virkeligheden i ${verification.winRate.toFixed(0)}% af temperaturpunkterne`
               : "Snapshot mangler win-rate endnu"}
           </div>
         </CardContent>

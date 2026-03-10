@@ -67,7 +67,6 @@ export function TemperatureTab({
   // Always show all data series
   const showDmi = true;
   const showMl = hasMlSeries;
-  const showApparent = true;
 
   const timelineData: TemperatureTimelinePoint[] = [
     ...history.map((point) => ({
@@ -154,13 +153,13 @@ export function TemperatureTab({
             <TrendingDown className="h-4 w-4" />
             {improvement !== null
               ? `ML har ${improvement.toFixed(1)}% lavere fejl end DMI`
-              : "Temperaturmodellen evalueres loebende"}
+              : "Temperaturmodellen evalueres løbende"}
           </div>
           <Badge variant="secondary">
             {avgDiff !== null ? `Typisk forskel: ${avgDiff.toFixed(2)}°C` : "Ingen aktiv ML-forskel endnu"}
           </Badge>
           <Badge variant="outline">
-            {maxDiff !== null ? `Stoerste forskel: ${maxDiff.toFixed(1)}°C` : "Ingen stoerste forskel endnu"}
+            {maxDiff !== null ? `Største forskel: ${maxDiff.toFixed(1)}°C` : "Ingen største forskel endnu"}
           </Badge>
         </div>
         <TooltipProvider>
@@ -168,34 +167,38 @@ export function TemperatureTab({
             <TooltipTrigger asChild>
               <button className="flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
                 <Info className="h-4 w-4" />
-                Saadan laeser du grafen
+                Sådan læser du grafen
               </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              Sort streg viser det faktiske vejr de seneste 7 dage. Faste farvede linjer viser hvordan prognoserne så ud. Stiplede linjer viser de kommende 48 timer.
+              <p className="font-medium mb-1">Backtest (historik):</p>
+              <p className="mb-2">Sort streg = faktisk målt temperatur. Rød/grøn = DMI/ML prognoser for de samme tidspunkter.</p>
+              <p className="font-medium mb-1">Forecast (fremtid):</p>
+              <p>Rød stiplede linje = DMI prognose. Grøn stiplede linje = ML justeret prognose.</p>
             </TooltipContent>
           </UiTooltip>
         </TooltipProvider>
       </div>
 
+      {/* Backtest Graf */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Thermometer className="h-5 w-5 text-slate-500" />
-              Sidste 7 dage + naeste 48 timer
+              Temperatur backtest - Sidste 7 dage
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-900"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[380px] w-full">
+          <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter(d => d.actual !== null || d.dmiHistory !== null || d.mlHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                 <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
@@ -205,50 +208,17 @@ export function TemperatureTab({
                     x={forecastBoundaryLabel}
                     stroke="#475569"
                     strokeWidth={2}
-                    label={{ value: "Nu / forecast", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Line type="monotone" dataKey="actual" name="Actual" stroke="#111827" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#111827" strokeWidth={3} dot={false} />
                 ) : null}
                 {showDmi ? (
-                  <>
-                    <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
-                    <Line
-                      type="monotone"
-                      dataKey="dmiForecast"
-                      name="DMI Forecast"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </>
+                  <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
                 ) : null}
                 {showMl && hasMlSeries ? (
-                  <>
-                    <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
-                    <Line
-                      type="monotone"
-                      dataKey="mlForecast"
-                      name="ML Forecast"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </>
-                ) : null}
-                {showApparent ? (
-                  <Line
-                    type="monotone"
-                    dataKey="apparentForecast"
-                    name="Foeles som"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    strokeDasharray="3 3"
-                    dot={false}
-                  />
+                  <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
                 ) : null}
               </ComposedChart>
             </ResponsiveContainer>
@@ -256,8 +226,66 @@ export function TemperatureTab({
         </CardContent>
       </Card>
 
+      {/* Forecast Graf */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Thermometer className="h-5 w-5 text-slate-500" />
+              Temperatur forecast - Næste 48 timer
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> Føles som</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[320px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timelineData.filter(d => d.dmiForecast !== null || d.mlForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
+                <Tooltip content={<CustomTooltip />} />
+                {showDmi ? (
+                  <Line
+                    type="monotone"
+                    dataKey="dmiForecast"
+                    name="DMI Forecast"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ) : null}
+                {showMl && hasMlSeries ? (
+                  <Line
+                    type="monotone"
+                    dataKey="mlForecast"
+                    name="ML Forecast"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ) : null}
+                <Line
+                  type="monotone"
+                  dataKey="apparentForecast"
+                  name="Føles som"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
       <div>
-        <h3 className="mb-4 text-lg font-semibold">Naeste 16 timer</h3>
+        <h3 className="mb-4 text-lg font-semibold">Næste 16 timer</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {forecast.slice(0, 16).map((hour, index) => (
             <Card key={hour.hour} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
@@ -279,7 +307,7 @@ export function TemperatureTab({
                 </p>
                 {hour.apparentTemp !== null && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Foeles {Math.round(hour.apparentTemp)}°
+                    Føles {Math.round(hour.apparentTemp)}°
                   </p>
                 )}
                 {index === 0 ? (
