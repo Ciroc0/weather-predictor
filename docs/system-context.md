@@ -57,16 +57,23 @@ Important code paths:
 - Prediction verification exists as `verify_past_predictions()`, but it is currently not wired into the scheduler or UI.
 - Frontend snapshots are rebuilt from the predictions dataset and now recompute missing future ML columns before publishing.
 
-Scheduler behavior:
+Scheduler behavior (fra `app.py` linje 2108-2121):
 
-- A background thread starts on app boot.
-- Only `update_daily()` is scheduled automatically.
-- Schedule time is `06:00` daily, using the process-local schedule loop.
+| Interval | Handling | Beskrivelse |
+|----------|----------|-------------|
+| Hver 3. time | `generate_predictions()` | Genererer nye 48-timers ML-forudsigelser |
+| Hver time | `verify_predictions()` | Verificerer gamle predictions mod faktiske observationer |
+| Dagligt kl. 06:00 | `update_daily()` | Henter forecast og observationsdata for de sidste 7 dage |
+
+Startup catch-up:
+- En background thread kører ved startup og tjekker om data mangler
+- Hvis der mangler data, køres update_daily(), generate_predictions() og verify_predictions() automatisk
+- Dette sikrer at systemet kommer op og køre efter en restart
 
 Observed implications:
 
 - The collector is the operational hub. If this Space is broken, both datasets stop evolving.
-- Prediction verification is implemented but currently dormant unless called manually from code.
+- Prediction verification kører automatisk hver time og ved startup hvis nødvendigt.
 
 ### `hf/spaces/dmi-ml-trainer`
 
@@ -105,16 +112,24 @@ Model output:
 - Downstream ML temperature is computed as:
   `ml_pred = dmi_temp_pred + predicted_correction`
 
-Scheduler behavior:
+Scheduler behavior (fra `app.py` linje 669-678):
 
-- Automatic retraining is scheduled for Sunday at `02:00`.
-- Manual training is exposed through a single Gradio button.
+| Interval | Handling | Beskrivelse |
+|----------|----------|-------------|
+| Søndag kl. 06:30 | `auto_retrain()` | Automatisk retraining af alle target-modeller |
 
-Current dataset metadata indicates:
+Manuel træning er tilgængelig via Gradio UI knappen "Train and Deploy All Aarhus Models".
 
-- Last recorded training timestamp in `model_meta.json`: `2026-03-08 02:00:55+01:00`
-- Training sample count: `1922`
-- Training period: `2025-12-11` to `2026-03-01`
+Training targets (5 targets × 4 lead buckets = op til 20 modeller):
+- `temperature`: XGBRegressor korrektionsmodel
+- `wind_speed`: XGBRegressor korrektionsmodel
+- `wind_gust`: XGBRegressor korrektionsmodel
+- `rain_event`: XGBClassifier klassifikationsmodel
+- `rain_amount`: XGBRegressor regression (kun våde timer)
+
+Model promotion:
+- Kun modeller der slår baseline (rå DMI forecast) på validation bliver promoted
+- Ellers beholdes eksisterende model for den pågældende target/bucket
 
 ### `hf/spaces/dmi-vs-ml-dashboard`
 
@@ -143,9 +158,15 @@ Evaluation logic:
 
 Scheduler behavior:
 
-- A schedule loop exists, but it only logs an auto-refresh message at `13:00`.
-- It does not persist data or update any dataset.
-- Real refresh behavior comes from Gradio `load()` and the manual refresh button.
+- Ingen automatisk scheduler
+- Data hentes on-demand via Gradio `load()`
+- Cache TTL: 5 minutter (300 sekunder)
+- Manuel refresh tilgængelig via "Refresh All" knappen
+
+Datakilder ved hver load:
+1. `training_matrix.parquet` fra dmi-aarhus-weather-data (historiske data)
+2. `predictions_latest.parquet` fra dmi-aarhus-predictions (live predictions)
+3. Model bundles (*.pkl) fra dmi-aarhus-weather-data
 
 Observed implications:
 
@@ -275,14 +296,15 @@ Why it matters:
 
 ## Drift And Scheduling Notes
 
-Current scheduled actions in code:
+Scheduler opsummering (fra koden):
 
-- Collector:
-  daily `update_daily()` at `06:00`
-- Trainer:
-  Sunday `auto_retrain()` at `02:00`
-- Dashboard:
-  log-only refresh hook at `13:00`
+| Space | Scheduler | Interval | Handling |
+|-------|-----------|----------|----------|
+| dmi-collector | ✅ Ja | Hver 3. time | `generate_predictions()` - Nye 48-timers predictions |
+| dmi-collector | ✅ Ja | Hver time | `verify_predictions()` - Verificer gamle predictions |
+| dmi-collector | ✅ Ja | Dagligt 06:00 | `update_daily()` - Daglig dataopdatering |
+| dmi-ml-trainer | ✅ Ja | Søndag 06:30 | `auto_retrain()` - Automatisk model retraining |
+| dmi-vs-ml-dashboard | ❌ Nej | - | On-demand via Gradio UI (5 min cache)
 
 Important limitation:
 

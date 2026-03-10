@@ -114,23 +114,25 @@ Aktiveringsregel:
 
 ### 4. Spaces og drift
 
-`dmi-collector` bliver Aarhus driftshub og skal:
+`dmi-collector` er Aarhus driftshub og:
 
-- hente Aarhus forecast-runs
-- hente Aarhus observationer
-- bygge training matrix
-- generere 48-timers Aarhus-predictions
-- verificere gamle predictions
-- skrive dataset-filer og metrics
+- henter Aarhus forecast-runs fra Open-Meteo
+- henter Aarhus observationer fra Open-Meteo Archive
+- bygger training matrix
+- genererer 48-timers Aarhus-predictions
+- verificerer gamle predictions
+- skriver dataset-filer og metrics
+- publicerer frontend snapshot JSON
 
-Scheduler i collector:
+**Scheduler i dmi-collector (fra `app.py`):**
 
-- hver 3. time: hent ny Aarhus forecast-run
-- hver time: hent nye Aarhus observationer
-- hver 3. time: generér nye Aarhus-predictions
-- hver time: verificér gamle predictions
-- dagligt: rebuild training matrix
-- ugentligt: backfill/sanity-check historik
+| Interval | Handling | Beskrivelse |
+|----------|----------|-------------|
+| Hver 3. time | `generate_predictions()` | Genererer nye 48-timers ML-forudsigelser for temperatur, vind og regn |
+| Hver time | `verify_predictions()` | Verificerer gamle predictions mod faktiske observationer |
+| Dagligt kl. 06:00 | `update_daily()` | Henter forecast og observationsdata for de sidste 7 dage |
+
+Bemærk: Ved startup kører catch-up logik der automatisk opdaterer hvis data mangler.
 
 `dmi-ml-trainer` skal udvides til at vise:
 
@@ -139,14 +141,16 @@ Scheduler i collector:
 - feature importance
 - manuel retrain/promote
 
-`dmi-vs-ml-dashboard` skal bygges om til Aarhus-dashboard med faner for:
+`dmi-vs-ml-dashboard` viser Aarhus-vejrdata med faner for:
 
-- temperatur
-- regn
-- vind
-- score/performance
+- **Temperature**: DMI vs ML prognoser + verificerede historiske data
+- **Wind**: Vindhastighed og vindstød prognoser
+- **Rain**: Regnsandsynlighed og regnmængde
+- **Performance**: Metrikker (RMSE, MAE, Brier score) og feature importance
 
-UI-tekst og labels skal konsekvent være Aarhus-specifikke.
+**Scheduler:** Ingen automatisk scheduler - data hentes on-demand via Gradio load() med 5-minutters cache.
+
+UI-tekst og labels er Aarhus-specifikke.
 
 ## Test Plan
 
