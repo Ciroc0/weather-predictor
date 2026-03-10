@@ -6,7 +6,7 @@ const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 
 // Direct file download URLs from HF
 // Format: https://huggingface.co/datasets/{owner}/{repo}/resolve/main/{file}
-const HF_PREDICTIONS_URL = `https://huggingface.co/datasets/${HF_DATASET_PREDICTIONS}/resolve/main/predictions_latest.parquet`;
+const HF_PREDICTIONS_URL = `https://huggingface.co/datasets/${HF_DATASET_PREDICTIONS}/resolve/main/predictions.parquet`;
 const HF_WEATHER_URL = `https://huggingface.co/datasets/${HF_DATASET_WEATHER}/resolve/main/training_matrix.parquet`;
 
 // Simple parquet parser for browser/Node.js
