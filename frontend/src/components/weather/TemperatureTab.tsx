@@ -172,7 +172,7 @@ export function TemperatureTab({
               </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              Sort er faktisk vejr i de sidste 7 dage. Faste linjer er backtest. Stiplede linjer er de naeste 48 timer.
+              Sort streg viser det faktiske vejr de seneste 7 dage. Faste farvede linjer viser hvordan prognoserne så ud. Stiplede linjer viser de kommende 48 timer.
             </TooltipContent>
           </UiTooltip>
         </TooltipProvider>

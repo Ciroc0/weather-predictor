@@ -234,7 +234,7 @@ export function RainTab({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-sm">
-                  Sort er faktisk regn i historikken. Faste linjer er backtest. Stiplede linjer er forecast.
+                  Søjler viser faktisk regn i historikken. Faste linjer viser gamle prognoser. Stiplede linjer viser nye prognoser.
                 </TooltipContent>
               </UiTooltip>
             </TooltipProvider>

@@ -190,7 +190,7 @@ export function PerformanceTab({
                   {verification.winRate !== null ? `${verification.winRate.toFixed(1)}%` : "—"}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Gaaelder for temperatur, hvor der er flest verificerede sammenligninger lige nu.
+                  Viser hvor ofte vores ML ramte nærmere virkeligheden end DMI's prognose.
                 </p>
               </div>
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
@@ -405,7 +405,7 @@ export function PerformanceTab({
             <BarChart3 className="h-5 w-5 text-slate-500" />
             Performance pr. tidshorisont
           </CardTitle>
-          <CardDescription>DMI-prognose og ML sammenlignes inden for samme tidshorisont.</CardDescription>
+          <CardDescription>Se hvordan DMI og ML klarer sig på forskellige tidshorisonter.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="h-[320px] w-full">
@@ -453,7 +453,7 @@ export function PerformanceTab({
               Hvad modellen laegger vaegt paa
             </CardTitle>
             <CardDescription>
-              De vigtigste input for den valgte del af produktet.
+              Det som modellen lægger mest vægt på i sine beregninger.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -165,21 +165,30 @@ export function getForecastPrimaryValue(
 
 export function getReadableMetricName(metric: "rmse" | "mae" | "winRate"): string {
   if (metric === "rmse") {
-    return "Gennemsnitlig fejl";
+    return "Gennemsnitlig præcision (lavere er bedre)";
   }
   if (metric === "mae") {
-    return "Typisk afvigelse";
+    return "Typisk afvigelse fra virkeligheden";
   }
-  return "Andel hvor ML var taettest paa virkeligheden";
+  return "Hvor ofte ML ramte rigtigst";
 }
 
 export function humanizeFeatureName(feature: string): string {
   const readable = feature
-    .replace(/^dmi_/, "DMI ")
+    .replace(/^dmi_/, "DMI's ")
     .replace(/^ml_/, "ML ")
     .replace(/_/g, " ")
-    .replace(/\b2m\b/g, "2 m")
-    .replace(/\b10m\b/g, "10 m")
+    .replace(/\b2m\b/g, "2 meter")
+    .replace(/\b10m\b/g, "10 meter")
+    .replace(/temperature/, "temperatur")
+    .replace(/windspeed/, "vindhastighed")
+    .replace(/windgusts/, "vindstød")
+    .replace(/precipitation/, "nedbør")
+    .replace(/probability/, "sandsynlighed")
+    .replace(/pressure/, "lufttryk")
+    .replace(/humidity/, "luftfugtighed")
+    .replace(/cloudcover/, "skydække")
+    .replace(/prediction/, "prognose")
     .trim();
   return readable.charAt(0).toUpperCase() + readable.slice(1);
 }

@@ -233,7 +233,7 @@ export function WindTab({
               {currentWind.windDirection !== null ? `${Math.round(currentWind.windDirection)}°` : "Ingen data"}
             </p>
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              Retningen viser, hvor vinden kommer fra i prognosen.
+              Pilets retning viser hvorfra vinden kommer.
             </p>
           </CardContent>
         </Card>

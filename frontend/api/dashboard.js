@@ -1,379 +1,410 @@
-const HF_PREDICTIONS_DATASET =
-  process.env.HF_PREDICTIONS_DATASET || "Ciroc0/dmi-aarhus-predictions";
-const HF_FRONTEND_SNAPSHOT_FILE =
-  process.env.HF_FRONTEND_SNAPSHOT_FILE || "frontend_snapshot.json";
+import { tableFromIPC, tableFromParquet } from "apache-arrow";
+
+const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
+const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
 const HF_TOKEN = process.env.HF_TOKEN;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const TARGET_LABELS = {
-  temperature: "Temperatur",
-  wind_speed: "Vindhastighed",
-  wind_gust: "Vindstød",
-  rain_event: "Regnrisiko",
-  rain_amount: "Regnmængde",
-};
-
-const EXPLANATIONS = {
-  forecast:
-    "Du ser DMI's prognose side om side med vores ML-justering, når der er en aktiv model.",
-  performance:
-    "Her kan du sammenligne, hvad DMI sagde, hvad ML sagde, og hvad vejret faktisk endte med at blive.",
-  sources:
-    "DMI er grundprognosen. ML er vores lokale justering. Hvis en ML-model ikke er aktiv, viser vi DMI direkte.",
-};
-
-const LEAD_BUCKET_ORDER = ["1-6", "7-12", "13-24", "25-48"];
-
 let cache = {
   expiresAt: 0,
-  snapshot: null,
+  data: null,
   fetchedAt: null,
 };
 
-function buildSnapshotUrl() {
-  const encodedDataset = encodeURIComponent(HF_PREDICTIONS_DATASET).replace("%2F", "/");
-  const encodedFile = encodeURIComponent(HF_FRONTEND_SNAPSHOT_FILE);
-  return `https://huggingface.co/datasets/${encodedDataset}/resolve/main/${encodedFile}?download=true`;
-}
-
-function toFiniteNumber(value, fallback = null) {
-  if (value === null || value === undefined || value === "") {
-    return fallback;
-  }
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function chooseEffectiveValue(mlValue, dmiValue, hasActiveModel) {
-  if (hasActiveModel && mlValue !== null) {
-    return { value: mlValue, source: "ml" };
-  }
-  if (dmiValue !== null) {
-    return { value: dmiValue, source: "dmi" };
-  }
-  if (mlValue !== null) {
-    return { value: mlValue, source: "ml" };
-  }
-  return { value: null, source: "dmi" };
-}
-
-function getLeadBucketRowsForTarget(leadBuckets, target) {
-  return (leadBuckets || []).filter((bucket) => bucket?.target === target);
-}
-
-function inferHasActiveModel(snapshot, target) {
-  if (snapshot?.targetStatus?.[target]?.hasActiveModel !== undefined) {
-    return Boolean(snapshot.targetStatus[target].hasActiveModel);
-  }
-
-  const targetBuckets = getLeadBucketRowsForTarget(snapshot?.leadBuckets, target);
-  if (targetBuckets.length > 0) {
-    return targetBuckets.some((bucket) => toFiniteNumber(bucket?.improvementPct, 0) > 0);
-  }
-
-  return false;
-}
-
-function buildTargetStatus(snapshot) {
-  const targetStatus = {};
-
-  for (const target of Object.keys(TARGET_LABELS)) {
-    const rawStatus = snapshot?.targetStatus?.[target];
-    if (rawStatus) {
-      targetStatus[target] = {
-        hasActiveModel: Boolean(rawStatus.hasActiveModel),
-        activeBuckets: LEAD_BUCKET_ORDER.filter((bucket) =>
-          (rawStatus.activeBuckets || []).includes(bucket),
-        ),
-        statusLabel:
-          rawStatus.statusLabel ||
-          (rawStatus.hasActiveModel ? "ML aktiv" : "Vises som DMI-prognose"),
-        statusDescription:
-          rawStatus.statusDescription ||
-          (rawStatus.hasActiveModel
-            ? `ML bruges aktivt for ${TARGET_LABELS[target].toLowerCase()}, når den findes i forecastet.`
-            : `Vi viser DMI direkte for ${TARGET_LABELS[target].toLowerCase()}, fordi der ikke er en aktiv ML-model endnu.`),
-      };
-      continue;
+// Map parquet data to frontend format
+function buildForecast(predictionsTable) {
+  const forecast = [];
+  const now = new Date();
+  
+  for (let i = 0; i < predictionsTable.numRows; i++) {
+    const row = {};
+    for (const field of predictionsTable.schema.fields) {
+      const value = predictionsTable.getChild(field.name)?.get(i);
+      row[field.name] = value;
     }
+    
+    // Only include future predictions
+    const targetTime = new Date(row.target_timestamp);
+    if (targetTime <= now) continue;
+    
+    forecast.push({
+      timestamp: row.target_timestamp,
+      hour: targetTime.getHours(),
+      leadTimeHours: row.lead_time_hours ?? Math.round((targetTime - now) / (1000 * 60 * 60)),
+      dmiTemp: row.dmi_temperature_2m_pred ?? null,
+      mlTemp: row.ml_temp ?? null,
+      effectiveTemp: row.ml_temp ?? row.dmi_temperature_2m_pred ?? null,
+      effectiveTempSource: row.ml_temp ? "ml" : "dmi",
+      apparentTemp: row.dmi_apparent_temperature_pred ?? row.dmi_temperature_2m_pred ?? null,
+      dmiWindSpeed: row.dmi_windspeed_10m_pred ?? null,
+      mlWindSpeed: row.ml_wind_speed ?? null,
+      effectiveWindSpeed: row.ml_wind_speed ?? row.dmi_windspeed_10m_pred ?? null,
+      effectiveWindSpeedSource: row.ml_wind_speed ? "ml" : "dmi",
+      dmiWindGust: row.dmi_windgusts_10m_pred ?? null,
+      mlWindGust: row.ml_wind_gust ?? null,
+      effectiveWindGust: row.ml_wind_gust ?? row.dmi_windgusts_10m_pred ?? null,
+      effectiveWindGustSource: row.ml_wind_gust ? "ml" : "dmi",
+      windDirection: row.dmi_winddirection_10m_pred ?? null,
+      dmiRainProb: row.dmi_precipitation_probability_pred ?? 0,
+      mlRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : 0,
+      effectiveRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : (row.dmi_precipitation_probability_pred ?? 0),
+      effectiveRainProbSource: row.ml_rain_prob ? "ml" : "dmi",
+      dmiRainAmount: row.dmi_precipitation_pred ?? 0,
+      mlRainAmount: row.ml_rain_amount ?? 0,
+      effectiveRainAmount: row.ml_rain_amount ?? row.dmi_precipitation_pred ?? 0,
+      effectiveRainAmountSource: row.ml_rain_amount ? "ml" : "dmi",
+      weatherCode: row.dmi_weathercode_pred ?? null,
+      cloudCover: row.dmi_cloudcover_pred ?? null,
+      humidity: row.dmi_relative_humidity_2m_pred ?? null,
+      pressure: row.dmi_pressure_msl_pred ?? null,
+    });
+  }
+  
+  return forecast.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
 
-    const hasActiveModel = inferHasActiveModel(snapshot, target);
-    targetStatus[target] = {
-      hasActiveModel,
-      activeBuckets: LEAD_BUCKET_ORDER.filter((bucket) =>
-        getLeadBucketRowsForTarget(snapshot?.leadBuckets, target).some((row) => row?.bucket === bucket),
-      ),
-      statusLabel: hasActiveModel ? "ML aktiv" : "Vises som DMI-prognose",
-      statusDescription: hasActiveModel
-        ? `ML bruges aktivt for ${TARGET_LABELS[target].toLowerCase()}, når den findes i forecastet.`
-        : `Vi viser DMI direkte for ${TARGET_LABELS[target].toLowerCase()}, fordi der ikke er en aktiv ML-model endnu.`,
+function buildHistory(trainingTable) {
+  const temperature = [];
+  const wind = [];
+  const rain = [];
+  
+  const now = new Date();
+  const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  
+  for (let i = 0; i < trainingTable.numRows; i++) {
+    const row = {};
+    for (const field of trainingTable.schema.fields) {
+      const value = trainingTable.getChild(field.name)?.get(i);
+      row[field.name] = value;
+    }
+    
+    const targetTime = new Date(row.target_timestamp);
+    if (targetTime < sevenDaysAgo || targetTime > now) continue;
+    
+    // Only include rows with actual data
+    if (row.actual_temp !== null && row.actual_temp !== undefined) {
+      temperature.push({
+        timestamp: row.target_timestamp,
+        dmiTemp: row.dmi_temperature_2m_pred ?? null,
+        mlTemp: row.ml_temp ?? null,
+        actualTemp: row.actual_temp ?? null,
+        verified: row.actual_temp !== null,
+      });
+    }
+    
+    if (row.actual_wind_speed !== null && row.actual_wind_speed !== undefined) {
+      wind.push({
+        timestamp: row.target_timestamp,
+        dmiWindSpeed: row.dmi_windspeed_10m_pred ?? null,
+        mlWindSpeed: row.ml_wind_speed ?? null,
+        actualWindSpeed: row.actual_wind_speed ?? null,
+        dmiWindGust: row.dmi_windgusts_10m_pred ?? null,
+        mlWindGust: row.ml_wind_gust ?? null,
+        actualWindGust: row.actual_wind_gust ?? null,
+        verified: row.actual_wind_speed !== null,
+      });
+    }
+    
+    if (row.actual_precipitation !== null && row.actual_precipitation !== undefined) {
+      rain.push({
+        timestamp: row.target_timestamp,
+        dmiRainProb: row.dmi_precipitation_probability_pred ?? 0,
+        mlRainProb: row.ml_rain_prob ? row.ml_rain_prob * 100 : 0,
+        actualRainEvent: row.actual_precipitation > 0.1 ? 1 : 0,
+        dmiRainAmount: row.dmi_precipitation_pred ?? 0,
+        mlRainAmount: row.ml_rain_amount ?? 0,
+        actualRainAmount: row.actual_precipitation ?? null,
+        verified: row.actual_precipitation !== null,
+      });
+    }
+  }
+  
+  return { temperature, wind, rain };
+}
+
+function calculateMetrics(history) {
+  // Temperature metrics
+  const tempVerified = history.temperature.filter(p => p.verified && p.actualTemp !== null);
+  let tempMetrics = null;
+  
+  if (tempVerified.length > 0) {
+    const dmiErrors = tempVerified.map(p => Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp)));
+    const mlErrors = tempVerified.map(p => Math.abs(p.actualTemp - (p.mlTemp ?? p.dmiTemp ?? p.actualTemp)));
+    
+    const dmiMae = dmiErrors.reduce((a, b) => a + b, 0) / dmiErrors.length;
+    const mlMae = mlErrors.reduce((a, b) => a + b, 0) / mlErrors.length;
+    
+    const dmiRmse = Math.sqrt(dmiErrors.map(e => e * e).reduce((a, b) => a + b, 0) / dmiErrors.length);
+    const mlRmse = Math.sqrt(mlErrors.map(e => e * e).reduce((a, b) => a + b, 0) / mlErrors.length);
+    
+    tempMetrics = {
+      target: "temperature",
+      periodLabel: `Seneste 7 dage (${tempVerified.length} punkter)`,
+      rmseDmi: dmiRmse,
+      rmseMl: mlRmse,
+      maeDmi: dmiMae,
+      maeMl: mlMae,
+      winRate: tempVerified.filter(p => {
+        const dmiErr = Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp));
+        const mlErr = Math.abs(p.actualTemp - (p.mlTemp ?? p.dmiTemp ?? p.actualTemp));
+        return mlErr < dmiErr;
+      }).length / tempVerified.length * 100,
+      totalPredictions: tempVerified.length,
     };
   }
-
-  return targetStatus;
-}
-
-function normalizeForecastRow(row, targetStatus) {
-  const dmiTemp = toFiniteNumber(row?.dmiTemp);
-  const mlTemp = toFiniteNumber(row?.mlTemp);
-  const dmiWindSpeed = toFiniteNumber(row?.dmiWindSpeed);
-  const mlWindSpeed = toFiniteNumber(row?.mlWindSpeed);
-  const dmiWindGust = toFiniteNumber(row?.dmiWindGust);
-  const mlWindGust = toFiniteNumber(row?.mlWindGust);
-  const dmiRainProb = toFiniteNumber(row?.dmiRainProb, 0) ?? 0;
-  const mlRainProb = toFiniteNumber(row?.mlRainProb, 0) ?? 0;
-  const dmiRainAmount = toFiniteNumber(row?.dmiRainAmount, 0) ?? 0;
-  const mlRainAmount = toFiniteNumber(row?.mlRainAmount, 0) ?? 0;
-
-  const effectiveTemp =
-    row?.effectiveTemp !== undefined
-      ? {
-          value: toFiniteNumber(row.effectiveTemp),
-          source: row?.effectiveTempSource === "ml" ? "ml" : "dmi",
-        }
-      : chooseEffectiveValue(mlTemp, dmiTemp, targetStatus.temperature.hasActiveModel);
-  const effectiveWindSpeed =
-    row?.effectiveWindSpeed !== undefined
-      ? {
-          value: toFiniteNumber(row.effectiveWindSpeed),
-          source: row?.effectiveWindSpeedSource === "ml" ? "ml" : "dmi",
-        }
-      : chooseEffectiveValue(
-          mlWindSpeed,
-          dmiWindSpeed,
-          targetStatus.wind_speed.hasActiveModel,
-        );
-  const effectiveWindGust =
-    row?.effectiveWindGust !== undefined
-      ? {
-          value: toFiniteNumber(row.effectiveWindGust),
-          source: row?.effectiveWindGustSource === "ml" ? "ml" : "dmi",
-        }
-      : chooseEffectiveValue(
-          mlWindGust,
-          dmiWindGust,
-          targetStatus.wind_gust.hasActiveModel,
-        );
-  const effectiveRainProb =
-    row?.effectiveRainProb !== undefined
-      ? {
-          value: toFiniteNumber(row.effectiveRainProb, 0) ?? 0,
-          source: row?.effectiveRainProbSource === "ml" ? "ml" : "dmi",
-        }
-      : chooseEffectiveValue(
-          mlRainProb,
-          dmiRainProb,
-          targetStatus.rain_event.hasActiveModel,
-        );
-  const effectiveRainAmount =
-    row?.effectiveRainAmount !== undefined
-      ? {
-          value: toFiniteNumber(row.effectiveRainAmount, 0) ?? 0,
-          source: row?.effectiveRainAmountSource === "ml" ? "ml" : "dmi",
-        }
-      : chooseEffectiveValue(
-          mlRainAmount,
-          dmiRainAmount,
-          targetStatus.rain_amount.hasActiveModel,
-        );
-
-  return {
-    timestamp: row?.timestamp || null,
-    hour: toFiniteNumber(row?.hour, 0) ?? 0,
-    leadTimeHours: toFiniteNumber(row?.leadTimeHours, 0) ?? 0,
-    dmiTemp,
-    mlTemp,
-    effectiveTemp: effectiveTemp.value,
-    effectiveTempSource: effectiveTemp.source,
-    apparentTemp: toFiniteNumber(row?.apparentTemp),
-    dmiWindSpeed,
-    mlWindSpeed,
-    effectiveWindSpeed: effectiveWindSpeed.value,
-    effectiveWindSpeedSource: effectiveWindSpeed.source,
-    dmiWindGust,
-    mlWindGust,
-    effectiveWindGust: effectiveWindGust.value,
-    effectiveWindGustSource: effectiveWindGust.source,
-    windDirection: toFiniteNumber(row?.windDirection),
-    dmiRainProb,
-    mlRainProb,
-    effectiveRainProb: effectiveRainProb.value ?? 0,
-    effectiveRainProbSource: effectiveRainProb.source,
-    dmiRainAmount,
-    mlRainAmount,
-    effectiveRainAmount: effectiveRainAmount.value ?? 0,
-    effectiveRainAmountSource: effectiveRainAmount.source,
-    weatherCode: toFiniteNumber(row?.weatherCode),
-    cloudCover: toFiniteNumber(row?.cloudCover),
-    humidity: toFiniteNumber(row?.humidity),
-    pressure: toFiniteNumber(row?.pressure),
+  
+  return tempMetrics || {
+    target: "temperature",
+    periodLabel: "Ingen verificeret historik endnu",
+    rmseDmi: null,
+    rmseMl: null,
+    maeDmi: null,
+    maeMl: null,
+    winRate: null,
+    totalPredictions: 0,
   };
 }
 
-function normalizeCurrent(current, firstForecastRow) {
-  const fallback = firstForecastRow || {};
-  const dmiTemp = toFiniteNumber(current?.dmiTemp, fallback.dmiTemp);
-  const mlTemp = toFiniteNumber(current?.mlTemp, fallback.mlTemp);
-  const dmiWindSpeed = toFiniteNumber(current?.dmiWindSpeed, fallback.dmiWindSpeed);
-  const mlWindSpeed = toFiniteNumber(current?.mlWindSpeed, fallback.mlWindSpeed);
-  const dmiWindGust = toFiniteNumber(current?.dmiWindGust, fallback.dmiWindGust);
-  const mlWindGust = toFiniteNumber(current?.mlWindGust, fallback.mlWindGust);
-  const dmiRainProb = toFiniteNumber(current?.dmiRainProb, fallback.dmiRainProb ?? 0) ?? 0;
-  const mlRainProb = toFiniteNumber(current?.mlRainProb, fallback.mlRainProb ?? 0) ?? 0;
-  const dmiRainAmount = toFiniteNumber(current?.dmiRainAmount, fallback.dmiRainAmount ?? 0) ?? 0;
-  const mlRainAmount = toFiniteNumber(current?.mlRainAmount, fallback.mlRainAmount ?? 0) ?? 0;
-
+function buildCurrentWeather(forecast) {
+  if (!forecast || forecast.length === 0) return null;
+  
+  const current = forecast[0];
   return {
-    timestamp: current?.timestamp || fallback.timestamp || null,
-    temp: toFiniteNumber(current?.temp, fallback.effectiveTemp),
-    dmiTemp,
-    mlTemp,
-    tempSource: current?.tempSource === "ml" ? "ml" : fallback.effectiveTempSource || "dmi",
-    apparentTemp: toFiniteNumber(current?.apparentTemp, fallback.apparentTemp),
-    windSpeed: toFiniteNumber(current?.windSpeed, fallback.effectiveWindSpeed),
-    dmiWindSpeed,
-    mlWindSpeed,
-    windSpeedSource:
-      current?.windSpeedSource === "ml" ? "ml" : fallback.effectiveWindSpeedSource || "dmi",
-    windGust: toFiniteNumber(current?.windGust, fallback.effectiveWindGust),
-    dmiWindGust,
-    mlWindGust,
-    windGustSource:
-      current?.windGustSource === "ml" ? "ml" : fallback.effectiveWindGustSource || "dmi",
-    windDirection: toFiniteNumber(current?.windDirection, fallback.windDirection),
-    rainProb: toFiniteNumber(current?.rainProb, fallback.effectiveRainProb ?? 0) ?? 0,
-    dmiRainProb,
-    mlRainProb,
-    rainProbSource:
-      current?.rainProbSource === "ml" ? "ml" : fallback.effectiveRainProbSource || "dmi",
-    rainAmount: toFiniteNumber(current?.rainAmount, fallback.effectiveRainAmount ?? 0) ?? 0,
-    dmiRainAmount,
-    mlRainAmount,
-    rainAmountSource:
-      current?.rainAmountSource === "ml" ? "ml" : fallback.effectiveRainAmountSource || "dmi",
-    humidity: toFiniteNumber(current?.humidity, fallback.humidity),
-    pressure: toFiniteNumber(current?.pressure, fallback.pressure),
-    cloudCover: toFiniteNumber(current?.cloudCover, fallback.cloudCover),
-    weatherCode: toFiniteNumber(current?.weatherCode, fallback.weatherCode),
+    timestamp: current.timestamp,
+    temp: current.effectiveTemp,
+    dmiTemp: current.dmiTemp,
+    mlTemp: current.mlTemp,
+    tempSource: current.effectiveTempSource,
+    apparentTemp: current.apparentTemp,
+    windSpeed: current.effectiveWindSpeed,
+    dmiWindSpeed: current.dmiWindSpeed,
+    mlWindSpeed: current.mlWindSpeed,
+    windSpeedSource: current.effectiveWindSpeedSource,
+    windGust: current.effectiveWindGust,
+    dmiWindGust: current.dmiWindGust,
+    mlWindGust: current.mlWindGust,
+    windGustSource: current.effectiveWindGustSource,
+    windDirection: current.windDirection,
+    rainProb: current.effectiveRainProb,
+    dmiRainProb: current.dmiRainProb,
+    mlRainProb: current.mlRainProb,
+    rainProbSource: current.effectiveRainProbSource,
+    rainAmount: current.effectiveRainAmount,
+    dmiRainAmount: current.dmiRainAmount,
+    mlRainAmount: current.mlRainAmount,
+    rainAmountSource: current.effectiveRainAmountSource,
+    humidity: current.humidity,
+    pressure: current.pressure,
+    cloudCover: current.cloudCover,
+    weatherCode: current.weatherCode,
   };
 }
 
-function normalizeHistory(history) {
-  return {
-    temperature: Array.isArray(history?.temperature) ? history.temperature : [],
-    wind: Array.isArray(history?.wind) ? history.wind : [],
-    rain: Array.isArray(history?.rain) ? history.rain : [],
-  };
-}
-
-function normalizeSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot !== "object") {
-    throw new Error("Snapshot mangler eller har ugyldigt format.");
+function buildLeadBuckets(history) {
+  const buckets = [];
+  const bucketDefs = [
+    { name: "1-6", min: 0, max: 6, label: "1-6 timer frem" },
+    { name: "7-12", min: 7, max: 12, label: "7-12 timer frem" },
+    { name: "13-24", min: 13, max: 24, label: "13-24 timer frem" },
+    { name: "25-48", min: 25, max: 48, label: "25-48 timer frem" },
+  ];
+  
+  // Group temperature predictions by lead time
+  const tempByBucket = {};
+  for (const bucket of bucketDefs) {
+    tempByBucket[bucket.name] = [];
   }
-
-  const targetStatus = buildTargetStatus(snapshot);
-  const forecast = Array.isArray(snapshot.forecast)
-    ? snapshot.forecast.map((row) => normalizeForecastRow(row, targetStatus))
-    : [];
-  const firstForecastRow = forecast[0] || null;
-
-  return {
-    location: {
-      name: snapshot?.location?.name || "Aarhus",
-      timezone: snapshot?.location?.timezone || "Europe/Copenhagen",
-    },
-    generatedAt: snapshot.generatedAt || new Date().toISOString(),
-    targetLabels: snapshot.targetLabels || TARGET_LABELS,
-    explanations: {
-      forecast: snapshot?.explanations?.forecast || EXPLANATIONS.forecast,
-      performance: snapshot?.explanations?.performance || EXPLANATIONS.performance,
-      sources: snapshot?.explanations?.sources || EXPLANATIONS.sources,
-    },
-    targetStatus,
-    current: normalizeCurrent(snapshot.current, firstForecastRow),
-    forecast,
-    history: normalizeHistory(snapshot.history),
-    verification: {
-      target: snapshot?.verification?.target || "temperature",
-      periodLabel:
-        snapshot?.verification?.periodLabel || "Ingen verificeret historik endnu",
-      rmseDmi: toFiniteNumber(snapshot?.verification?.rmseDmi),
-      rmseMl: toFiniteNumber(snapshot?.verification?.rmseMl),
-      maeDmi: toFiniteNumber(snapshot?.verification?.maeDmi),
-      maeMl: toFiniteNumber(snapshot?.verification?.maeMl),
-      winRate: toFiniteNumber(snapshot?.verification?.winRate),
-      totalPredictions: toFiniteNumber(snapshot?.verification?.totalPredictions, 0) ?? 0,
-    },
-    leadBuckets: Array.isArray(snapshot.leadBuckets) ? snapshot.leadBuckets : [],
-    featureImportance: Array.isArray(snapshot.featureImportance)
-      ? snapshot.featureImportance
-      : [],
-    modelInfo: {
-      trainedAt: snapshot?.modelInfo?.trainedAt || null,
-      trainingSamples: toFiniteNumber(snapshot?.modelInfo?.trainingSamples),
-      targets: Array.isArray(snapshot?.modelInfo?.targets) ? snapshot.modelInfo.targets : [],
-      registryGeneratedAt: snapshot?.modelInfo?.registryGeneratedAt || null,
-    },
-    alerts: Array.isArray(snapshot.alerts) ? snapshot.alerts : [],
-  };
+  
+  for (const point of history.temperature) {
+    const leadHours = Math.round((new Date(point.timestamp) - new Date()) / (1000 * 60 * 60));
+    for (const bucket of bucketDefs) {
+      if (leadHours >= bucket.min && leadHours <= bucket.max) {
+        tempByBucket[bucket.name].push(point);
+        break;
+      }
+    }
+  }
+  
+  for (const bucket of bucketDefs) {
+    const points = tempByBucket[bucket.name].filter(p => p.verified);
+    if (points.length > 0) {
+      const dmiMae = points.reduce((sum, p) => sum + Math.abs(p.actualTemp - (p.dmiTemp ?? p.actualTemp)), 0) / points.length;
+      const mlMae = points.reduce((sum, p) => sum + Math.abs(p.actualTemp - (p.mlTemp ?? p.dmiTemp ?? p.actualTemp)), 0) / points.length;
+      
+      buckets.push({
+        bucket: bucket.name,
+        label: bucket.label,
+        baselineMetric: dmiMae,
+        mlMetric: mlMae,
+        improvementPct: dmiMae > 0 ? ((dmiMae - mlMae) / dmiMae) * 100 : null,
+        target: "temperature",
+      });
+    }
+  }
+  
+  return buckets;
 }
 
-async function fetchSnapshot() {
+function checkMlActive(forecast, field) {
+  return forecast.some(f => f[field] !== null && f[field] !== undefined);
+}
+
+async function fetchParquetFromHF(dataset, file) {
+  const url = `https://huggingface.co/datasets/${dataset}/resolve/main/${file}?download=true`;
   const headers = {};
   if (HF_TOKEN) {
     headers.Authorization = `Bearer ${HF_TOKEN}`;
   }
-
-  const response = await fetch(buildSnapshotUrl(), {
-    headers,
-  });
-
+  
+  const response = await fetch(url, { headers });
   if (!response.ok) {
-    throw new Error(`HF snapshot request failed with status ${response.status}`);
+    throw new Error(`Failed to fetch ${file}: ${response.status}`);
   }
+  
+  const arrayBuffer = await response.arrayBuffer();
+  return await tableFromParquet(new Uint8Array(arrayBuffer));
+}
 
-  return response.json();
+async function buildDashboardData() {
+  // Fetch both datasets in parallel
+  const [predictionsTable, trainingTable] = await Promise.all([
+    fetchParquetFromHF(HF_DATASET_PREDICTIONS, "predictions_latest.parquet"),
+    fetchParquetFromHF(HF_DATASET_WEATHER, "training_matrix.parquet"),
+  ]);
+  
+  const forecast = buildForecast(predictionsTable);
+  const history = buildHistory(trainingTable);
+  const current = buildCurrentWeather(forecast);
+  const verification = calculateMetrics(history);
+  const leadBuckets = buildLeadBuckets(history);
+  
+  // Check which ML models are active
+  const hasMlTemp = checkMlActive(forecast, "mlTemp");
+  const hasMlWindSpeed = checkMlActive(forecast, "mlWindSpeed");
+  const hasMlWindGust = checkMlActive(forecast, "mlWindGust");
+  const hasMlRainProb = checkMlActive(forecast, "mlRainProb");
+  const hasMlRainAmount = checkMlActive(forecast, "mlRainAmount");
+  
+  return {
+    location: {
+      name: "Aarhus",
+      timezone: "Europe/Copenhagen",
+    },
+    generatedAt: new Date().toISOString(),
+    targetLabels: {
+      temperature: "Temperatur",
+      wind_speed: "Vindhastighed",
+      wind_gust: "Vindstød",
+      rain_event: "Regnrisiko",
+      rain_amount: "Regnmængde",
+    },
+    explanations: {
+      forecast: "DMI's prognose vises sammen med vores ML-justering, når den er tilgængelig.",
+      performance: "Se hvordan DMI og ML har klaret sig mod det faktiske vejr de seneste 7 dage.",
+      sources: "DMI er grundprognosen. ML er vores lokale justering baseret på historiske data.",
+    },
+    targetStatus: {
+      temperature: {
+        hasActiveModel: hasMlTemp,
+        activeBuckets: hasMlTemp ? ["1-6", "7-12", "13-24", "25-48"] : [],
+        statusLabel: hasMlTemp ? "ML aktiv" : "DMI-prognose",
+        statusDescription: hasMlTemp 
+          ? "Vores ML-model justerer DMI's temperaturprognose baseret på historiske mønstre."
+          : "Viser DMI's temperaturprognose direkte. ML-model er under træning."
+      },
+      wind_speed: {
+        hasActiveModel: hasMlWindSpeed,
+        activeBuckets: hasMlWindSpeed ? ["1-6", "7-12", "13-24", "25-48"] : [],
+        statusLabel: hasMlWindSpeed ? "ML aktiv" : "DMI-prognose",
+        statusDescription: hasMlWindSpeed
+          ? "Vores ML-model justerer vindhastighedsprognosen."
+          : "Viser DMI's vindprognose direkte. ML-model er under træning."
+      },
+      wind_gust: {
+        hasActiveModel: hasMlWindGust,
+        activeBuckets: hasMlWindGust ? ["1-6", "7-12", "13-24", "25-48"] : [],
+        statusLabel: hasMlWindGust ? "ML aktiv" : "DMI-prognose",
+        statusDescription: hasMlWindGust
+          ? "Vores ML-model forudsiger vindstød baseret på vejrmønstre."
+          : "Viser DMI's vindstødsprognose direkte. ML-model er under træning."
+      },
+      rain_event: {
+        hasActiveModel: hasMlRainProb,
+        activeBuckets: hasMlRainProb ? ["1-6", "7-12", "13-24", "25-48"] : [],
+        statusLabel: hasMlRainProb ? "ML aktiv" : "DMI-prognose",
+        statusDescription: hasMlRainProb
+          ? "Vores ML-model beregner sandsynlighed for regn."
+          : "Viser DMI's regnsandsynlighed direkte. ML-model er under træning."
+      },
+      rain_amount: {
+        hasActiveModel: hasMlRainAmount,
+        activeBuckets: hasMlRainAmount ? ["1-6", "7-12", "13-24", "25-48"] : [],
+        statusLabel: hasMlRainAmount ? "ML aktiv" : "DMI-prognose",
+        statusDescription: hasMlRainAmount
+          ? "Vores ML-model estimerer regnmængde."
+          : "Viser DMI's regnmængde direkte. ML-model er under træning."
+      },
+    },
+    current,
+    forecast,
+    history,
+    verification,
+    leadBuckets,
+    featureImportance: [], // Would need model metadata for this
+    modelInfo: {
+      trainedAt: null, // Would need to fetch from model_registry.json
+      trainingSamples: null,
+      targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
+      registryGeneratedAt: null,
+    },
+    alerts: [], // Could add weather alerts based on conditions
+  };
 }
 
 export default async function handler(_req, res) {
   const now = Date.now();
-  if (cache.snapshot && cache.expiresAt > now) {
+  
+  // Check cache
+  if (cache.data && cache.expiresAt > now) {
     return res.status(200).json({
-      snapshot: cache.snapshot,
+      snapshot: cache.data,
       stale: false,
       fetchedAt: cache.fetchedAt,
       source: "cache",
     });
   }
-
+  
   try {
-    const rawSnapshot = await fetchSnapshot();
-    const snapshot = normalizeSnapshot(rawSnapshot);
+    const data = await buildDashboardData();
+    
     cache = {
-      snapshot,
+      data,
       fetchedAt: new Date().toISOString(),
       expiresAt: now + CACHE_TTL_MS,
     };
-
+    
     return res.status(200).json({
-      snapshot,
+      snapshot: data,
       stale: false,
       fetchedAt: cache.fetchedAt,
       source: "huggingface",
     });
   } catch (error) {
-    if (cache.snapshot) {
+    console.error("Dashboard error:", error);
+    
+    // Return stale cache if available
+    if (cache.data) {
       return res.status(200).json({
-        snapshot: cache.snapshot,
+        snapshot: cache.data,
         stale: true,
         fetchedAt: cache.fetchedAt,
         source: "stale-cache",
-        error: error instanceof Error ? error.message : "Snapshot fetch failed",
+        error: error instanceof Error ? error.message : "Failed to fetch data",
       });
     }
-
+    
     return res.status(503).json({
-      error: error instanceof Error ? error.message : "Snapshot fetch failed",
+      error: error instanceof Error ? error.message : "Failed to fetch data from Hugging Face",
     });
   }
 }

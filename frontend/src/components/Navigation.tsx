@@ -29,7 +29,7 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
   const handleShare = async () => {
     const sharePayload = {
       title: "Aarhus Vejr",
-      text: "Live DMI- og ML-prognoser for Aarhus",
+      text: "Se om ML kan slå DMI's vejrprognose for Aarhus",
       url: window.location.href,
     };
 
@@ -57,7 +57,7 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
           <div className="hidden sm:block">
             <p className="text-base font-semibold text-slate-950 dark:text-white">Aarhus Vejr</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isStale ? "Seneste cachede snapshot" : "Vercel + Hugging Face"}
+              {isStale ? "Forbindelse til Hugging Face" : "Direkte fra Hugging Face"}
             </p>
           </div>
         </div>

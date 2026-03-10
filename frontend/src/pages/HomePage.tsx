@@ -101,7 +101,7 @@ export function HomePage() {
         <div className="space-y-6">
           <Card className="border-slate-200 dark:border-slate-800">
             <CardHeader>
-              <CardTitle>Aktive signaler</CardTitle>
+              <CardTitle>Vejrvarsler</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {snapshot.alerts.length > 0 ? (
@@ -127,7 +127,7 @@ export function HomePage() {
 
           <Card className="border-slate-200 dark:border-slate-800">
             <CardHeader>
-              <CardTitle>Modelstatus</CardTitle>
+              <CardTitle>Status for vejrmodeller</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
               <p>{snapshot.explanations.forecast}</p>
@@ -144,16 +144,16 @@ export function HomePage() {
 
           <Card className="border-slate-200 dark:border-slate-800">
             <CardHeader>
-              <CardTitle>Data bag siden</CardTitle>
+              <CardTitle>Om prognoserne</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <p>
-                Traenet:{" "}
+                Seneste modelopdatering:{" "}
                 {snapshot.modelInfo.trainedAt
-                  ? new Date(snapshot.modelInfo.trainedAt).toLocaleString("da-DK")
-                  : "Ukendt"}
+                  ? new Date(snapshot.modelInfo.trainedAt).toLocaleDateString("da-DK")
+                  : "Under udvikling"}
               </p>
-              <p>Samples: {snapshot.modelInfo.trainingSamples?.toLocaleString("da-DK") || "Ukendt"}</p>
+              <p>Antal vejrobservationer brugt til træning: {snapshot.modelInfo.trainingSamples?.toLocaleString("da-DK") || "Ikke tilgængelig endnu"}</p>
               <p>{snapshot.explanations.performance}</p>
             </CardContent>
           </Card>

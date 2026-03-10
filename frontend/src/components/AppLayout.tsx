@@ -37,11 +37,11 @@ export function AppLayout() {
         ) : dashboardQuery.isError && !response ? (
           <PageState
             mode="error"
-            title="Kunne ikke hente live-data"
+            title="Kunne ikke hente vejrdata"
             description={
               dashboardQuery.error instanceof Error
                 ? dashboardQuery.error.message
-                : "Snapshot kunne ikke læses fra backend."
+                : "Kunne ikke hente data fra Hugging Face. Prøv igen om lidt."
             }
             action={
               <Button onClick={handleRefresh} variant="outline">
@@ -58,8 +58,8 @@ export function AppLayout() {
       <footer className="border-t border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/80">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-sm text-slate-600 dark:text-slate-400 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <p>
-            <strong>Aarhus Vejr</strong> viser DMI-prognoser sammen med ML-korrektioner for temperatur,
-            vind og regn.
+            <strong>Aarhus Vejr</strong> sammenligner DMI's vejrprognoser med vores ML-modeller. 
+            Se om kunstig intelligens kan forudsige vejret bedre end meteorologerne.
           </p>
           <p>
             {response
