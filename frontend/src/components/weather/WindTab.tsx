@@ -110,7 +110,7 @@ export function WindTab({
       mlGustForecast: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      time: formatShortDate(point.hour),
       actualSpeed: null,
       dmiSpeedHistory: null,
       mlSpeedHistory: null,
@@ -126,7 +126,7 @@ export function WindTab({
 
   const warning = alerts.find((alert) => alert.type === "wind");
   const currentWind = forecast[0];
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].timestamp) : null;
+  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
 
   const CustomTooltip = ({
     active,

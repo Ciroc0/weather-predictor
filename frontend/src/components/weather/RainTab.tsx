@@ -83,7 +83,7 @@ export function RainTab({
       mlAmountForecast: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      time: formatShortDate(point.hour),
       actualProb: null,
       dmiProbHistory: null,
       mlProbHistory: null,
@@ -98,7 +98,7 @@ export function RainTab({
   ];
 
   const rainAlert = alerts.find((alert) => alert.type === "rain");
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].timestamp) : null;
+  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
   const dryPeriods = forecast
     .reduce<{ start: number; end: number; hours: number }[]>((periods, point, index, all) => {
       const isDry = point.effectiveRainProb < 20;
@@ -357,7 +357,7 @@ export function RainTab({
                       kl. {formatDanishTime(forecast[period.start]?.hour)} - kl. {formatDanishTime(forecast[period.end]?.hour)}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt"}
+                      {forecast[period.start] ? formatShortDate(forecast[period.start].hour) : "Ukendt"}
                     </p>
                   </div>
                 </div>

@@ -22,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatShortDate, getSourceLabel } from "@/lib/weather";
+import { formatDanishTime, formatShortDate, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
   HistoricalTemperaturePoint,
@@ -47,7 +47,7 @@ interface TemperatureTimelinePoint {
   dmiForecast: number | null;
   mlForecast: number | null;
   apparentForecast: number | null;
-  hour: number | null;
+  hour: string | null;
 }
 
 interface TooltipPayloadItem {
@@ -81,7 +81,7 @@ export function TemperatureTab({
       hour: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      time: formatShortDate(point.hour),
       actual: null,
       dmiHistory: null,
       mlHistory: null,
@@ -100,7 +100,7 @@ export function TemperatureTab({
   const avgDiff =
     differences.length > 0 ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
   const maxDiff = differences.length > 0 ? Math.max(...differences) : null;
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].timestamp) : null;
+  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
 
   const improvement =
     verification.rmseDmi !== null && verification.rmseMl !== null && verification.rmseDmi > 0
