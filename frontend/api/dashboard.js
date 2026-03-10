@@ -1,4 +1,4 @@
-import { tableFromIPC, tableFromParquet } from "apache-arrow";
+const parquet = require('parquetjs-lite');
 
 const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
@@ -11,18 +11,30 @@ let cache = {
   fetchedAt: null,
 };
 
+// Parse parquet buffer to array of objects
+async function parseParquet(buffer) {
+  const reader = new parquet.ParquetReader();
+  await reader.openBuffer(buffer);
+  
+  const rows = [];
+  const cursor = reader.getCursor();
+  let record = await cursor.next();
+  
+  while (record) {
+    rows.push(record);
+    record = await cursor.next();
+  }
+  
+  await reader.close();
+  return rows;
+}
+
 // Map parquet data to frontend format
-function buildForecast(predictionsTable) {
+function buildForecast(predictionsRows) {
   const forecast = [];
   const now = new Date();
   
-  for (let i = 0; i < predictionsTable.numRows; i++) {
-    const row = {};
-    for (const field of predictionsTable.schema.fields) {
-      const value = predictionsTable.getChild(field.name)?.get(i);
-      row[field.name] = value;
-    }
-    
+  for (const row of predictionsRows) {
     // Only include future predictions
     const targetTime = new Date(row.target_timestamp);
     if (targetTime <= now) continue;
@@ -63,7 +75,7 @@ function buildForecast(predictionsTable) {
   return forecast.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
-function buildHistory(trainingTable) {
+function buildHistory(trainingRows) {
   const temperature = [];
   const wind = [];
   const rain = [];
@@ -71,13 +83,7 @@ function buildHistory(trainingTable) {
   const now = new Date();
   const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
   
-  for (let i = 0; i < trainingTable.numRows; i++) {
-    const row = {};
-    for (const field of trainingTable.schema.fields) {
-      const value = trainingTable.getChild(field.name)?.get(i);
-      row[field.name] = value;
-    }
-    
+  for (const row of trainingRows) {
     const targetTime = new Date(row.target_timestamp);
     if (targetTime < sevenDaysAgo || targetTime > now) continue;
     
@@ -262,18 +268,24 @@ async function fetchParquetFromHF(dataset, file) {
   }
   
   const arrayBuffer = await response.arrayBuffer();
-  return await tableFromParquet(new Uint8Array(arrayBuffer));
+  return Buffer.from(arrayBuffer);
 }
 
 async function buildDashboardData() {
   // Fetch both datasets in parallel
-  const [predictionsTable, trainingTable] = await Promise.all([
+  const [predictionsBuffer, trainingBuffer] = await Promise.all([
     fetchParquetFromHF(HF_DATASET_PREDICTIONS, "predictions_latest.parquet"),
     fetchParquetFromHF(HF_DATASET_WEATHER, "training_matrix.parquet"),
   ]);
   
-  const forecast = buildForecast(predictionsTable);
-  const history = buildHistory(trainingTable);
+  // Parse parquet files
+  const [predictionsRows, trainingRows] = await Promise.all([
+    parseParquet(predictionsBuffer),
+    parseParquet(trainingBuffer),
+  ]);
+  
+  const forecast = buildForecast(predictionsRows);
+  const history = buildHistory(trainingRows);
   const current = buildCurrentWeather(forecast);
   const verification = calculateMetrics(history);
   const leadBuckets = buildLeadBuckets(history);
@@ -361,7 +373,7 @@ async function buildDashboardData() {
   };
 }
 
-export default async function handler(_req, res) {
+module.exports = async function handler(_req, res) {
   const now = Date.now();
   
   // Check cache
@@ -407,4 +419,4 @@ export default async function handler(_req, res) {
       error: error instanceof Error ? error.message : "Failed to fetch data from Hugging Face",
     });
   }
-}
+};
