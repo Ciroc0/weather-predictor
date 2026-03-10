@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatShortDate, getSourceLabel } from "@/lib/weather";
+import { formatDanishTime, formatShortDate, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
   HistoricalRainPoint,
@@ -354,7 +354,7 @@ export function RainTab({
                   </div>
                   <div>
                     <p className="font-medium">
-                      {forecast[period.start]?.hour}:00 - {forecast[period.end]?.hour}:00
+                      kl. {formatDanishTime(forecast[period.start]?.hour)} - kl. {formatDanishTime(forecast[period.end]?.hour)}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt"}

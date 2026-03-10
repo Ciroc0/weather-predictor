@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardOutlet } from "@/hooks/useDashboardOutlet";
 import {
+  formatDanishTime,
   getAlertSummary,
   getForecastPreview,
   getSourceLabel,
@@ -73,7 +74,7 @@ export function HomePage() {
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{hour.hour}:00</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>
                   <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}>
                     {getSourceLabel(hour.effectiveTempSource)}
                   </Badge>

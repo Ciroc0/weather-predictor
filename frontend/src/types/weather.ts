@@ -25,7 +25,7 @@ export interface TargetStatus {
 }
 
 export interface CurrentWeather {
-  timestamp: string;
+  timestamp?: string;  // Optional - not always present from API
   temp: number | null;
   dmiTemp: number | null;
   mlTemp: number | null;
@@ -55,8 +55,8 @@ export interface CurrentWeather {
 }
 
 export interface WeatherForecast {
-  timestamp: string;
-  hour: number;
+  timestamp: string;  // ISO timestamp
+  hour: string;  // ISO timestamp (same as timestamp, for backwards compat)
   leadTimeHours: number;
   dmiTemp: number | null;
   mlTemp: number | null;

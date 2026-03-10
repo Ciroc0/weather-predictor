@@ -272,7 +272,7 @@ export function TemperatureTab({
             <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
               <CardContent className="p-3 text-center">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{hour.hour}:00</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>
                   <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}>
                     {getSourceLabel(hour.effectiveTempSource)}
                   </Badge>
@@ -286,9 +286,11 @@ export function TemperatureTab({
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "ingen data"}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Foeles {hour.apparentTemp !== null ? `${Math.round(hour.apparentTemp)}°` : "—"}
-                </p>
+                {hour.apparentTemp !== null && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Foeles {Math.round(hour.apparentTemp)}°
+                  </p>
+                )}
                 {index === 0 ? (
                   <Badge variant="outline" className="mt-2 border-emerald-500 text-emerald-600">
                     Nu

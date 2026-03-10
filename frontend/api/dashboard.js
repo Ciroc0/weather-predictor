@@ -103,6 +103,7 @@ export default async function handler(req, res) {
       
       forecast.push({
         hour: p.timestamp,
+        timestamp: p.timestamp,
         leadTimeHours: p.lead_time_hours,
         // Temperature
         dmiTemp: p.dmi_temp_pred ?? null,

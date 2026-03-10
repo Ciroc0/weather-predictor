@@ -74,7 +74,7 @@ function SourceDetails({
 
 export function WeatherHero({ current, generatedAt, summaryText, statusText }: WeatherHeroProps) {
   const temperature = current.temp === null ? "—" : `${Math.round(current.temp)}`;
-  const apparent = current.apparentTemp === null ? "—" : `${Math.round(current.apparentTemp)}°C`;
+  const apparent = current.apparentTemp === null ? null : `${Math.round(current.apparentTemp)}°C`;
   const rain = `${current.rainProb.toFixed(0)}%`;
   const wind = current.windSpeed === null ? "—" : `${current.windSpeed.toFixed(1)} m/s`;
 
@@ -106,7 +106,9 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
               <p className="mt-2 text-lg text-slate-700 dark:text-slate-300">
                 {getWeatherDescription(current.weatherCode)}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Foeles som {apparent}</p>
+              {apparent && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">Foeles som {apparent}</p>
+              )}
             </div>
           </div>
 
