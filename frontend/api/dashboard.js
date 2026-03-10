@@ -1,6 +1,6 @@
 // Use HF Datasets Server API to get data as JSON instead of parsing parquet
-const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_DATASET_PREDICTIONS = "Ciroc0/dmi-aarhus-predictions";
+const HF_DATASET_WEATHER = "Ciroc0/dmi-aarhus-weather-data";
 const HF_TOKEN = process.env.HF_TOKEN;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -12,55 +12,76 @@ let cache = {
 
 async function fetchDatasetFromHF(dataset, config, split) {
   // Use HF datasets-server API to get data as JSON
-  const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=${config}&split=${split}&offset=0&length=100`;
+  const url = `https://datasets-server.huggingface.co/first-rows?dataset=${encodeURIComponent(dataset)}&config=${encodeURIComponent(config)}&split=${split}`;
   const headers = {};
+  
   if (HF_TOKEN) {
     headers.Authorization = `Bearer ${HF_TOKEN}`;
+    console.log(`[HF API] Using token for ${dataset}`);
+  } else {
+    console.log(`[HF API] No token available for ${dataset}`);
   }
   
+  console.log(`[HF API] Fetching: ${url}`);
+  
   const response = await fetch(url, { headers });
+  
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${dataset}: ${response.status}`);
+    const text = await response.text();
+    console.error(`[HF API] Error ${response.status} for ${dataset}:`, text.substring(0, 500));
+    throw new Error(`Failed to fetch ${dataset}: ${response.status} - ${text.substring(0, 200)}`);
   }
   
   const data = await response.json();
-  return data.rows.map(r => r.row);
+  console.log(`[HF API] Got ${data.rows?.length || 0} rows from ${dataset}`);
+  
+  return data.rows?.map(r => r.row) || [];
 }
 
 async function fetchAllRows(dataset, config, split) {
+  // For training data, we need to paginate
   const allRows = [];
   let offset = 0;
   const length = 100;
+  const maxRows = 5000; // Safety limit
   
-  while (true) {
-    const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=${config}&split=${split}&offset=${offset}&length=${length}`;
+  while (allRows.length < maxRows) {
+    const url = `https://datasets-server.huggingface.co/rows?dataset=${encodeURIComponent(dataset)}&config=${encodeURIComponent(config)}&split=${split}&offset=${offset}&length=${length}`;
     const headers = {};
+    
     if (HF_TOKEN) {
       headers.Authorization = `Bearer ${HF_TOKEN}`;
     }
     
     const response = await fetch(url, { headers });
+    
     if (!response.ok) {
-      if (response.status === 404) break; // No more data
-      throw new Error(`Failed to fetch ${dataset}: ${response.status}`);
+      if (response.status === 404) break;
+      const text = await response.text();
+      console.error(`[HF API] Error fetching rows: ${response.status}`, text.substring(0, 200));
+      break;
     }
     
     const data = await response.json();
+    
     if (!data.rows || data.rows.length === 0) break;
     
     allRows.push(...data.rows.map(r => r.row));
     offset += length;
     
-    // Safety limit
-    if (offset > 10000) break;
+    // Only get last 7 days worth of data (~168 hours)
+    if (allRows.length >= 2000) break;
   }
   
+  console.log(`[HF API] Total rows fetched from ${dataset}: ${allRows.length}`);
   return allRows;
 }
 
 function buildForecast(predictionsRows) {
   const forecast = [];
   const now = new Date();
+  
+  console.log(`[Build] Processing ${predictionsRows.length} prediction rows`);
   
   for (const row of predictionsRows) {
     const targetTime = new Date(row.target_timestamp);
@@ -99,7 +120,9 @@ function buildForecast(predictionsRows) {
     });
   }
   
-  return forecast.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const result = forecast.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  console.log(`[Build] Built ${result.length} forecast entries`);
+  return result;
 }
 
 function buildHistory(trainingRows) {
@@ -109,6 +132,8 @@ function buildHistory(trainingRows) {
   
   const now = new Date();
   const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  
+  console.log(`[Build] Processing ${trainingRows.length} training rows`);
   
   for (const row of trainingRows) {
     const targetTime = new Date(row.target_timestamp);
@@ -151,6 +176,7 @@ function buildHistory(trainingRows) {
     }
   }
   
+  console.log(`[Build] History: ${temperature.length} temp, ${wind.length} wind, ${rain.length} rain`);
   return { temperature, wind, rain };
 }
 
@@ -279,11 +305,26 @@ function checkMlActive(forecast, field) {
 }
 
 async function buildDashboardData() {
-  // Fetch data from HF datasets-server API (returns JSON directly)
-  const [predictionsRows, trainingRows] = await Promise.all([
-    fetchDatasetFromHF(HF_DATASET_PREDICTIONS, "default", "train").catch(() => []),
-    fetchAllRows(HF_DATASET_WEATHER, "default", "train").catch(() => []),
-  ]);
+  console.log("[Dashboard] Starting data fetch...");
+  console.log(`[Dashboard] HF_TOKEN available: ${!!HF_TOKEN}`);
+  
+  // Fetch data from HF datasets-server API
+  let predictionsRows = [];
+  let trainingRows = [];
+  
+  try {
+    predictionsRows = await fetchDatasetFromHF(HF_DATASET_PREDICTIONS, "default", "train");
+  } catch (e) {
+    console.error("[Dashboard] Failed to fetch predictions:", e.message);
+  }
+  
+  try {
+    trainingRows = await fetchAllRows(HF_DATASET_WEATHER, "default", "train");
+  } catch (e) {
+    console.error("[Dashboard] Failed to fetch training data:", e.message);
+  }
+  
+  console.log(`[Dashboard] Building dashboard with ${predictionsRows.length} predictions, ${trainingRows.length} training rows`);
   
   const forecast = buildForecast(predictionsRows);
   const history = buildHistory(trainingRows);
@@ -297,7 +338,7 @@ async function buildDashboardData() {
   const hasMlRainProb = checkMlActive(forecast, "mlRainProb");
   const hasMlRainAmount = checkMlActive(forecast, "mlRainAmount");
   
-  return {
+  const result = {
     location: {
       name: "Aarhus",
       timezone: "Europe/Copenhagen",
@@ -371,12 +412,17 @@ async function buildDashboardData() {
     },
     alerts: [],
   };
+  
+  console.log("[Dashboard] Data built successfully");
+  return result;
 }
 
 export default async function handler(req, res) {
   const now = Date.now();
   
+  // Check cache
   if (cache.data && cache.expiresAt > now) {
+    console.log("[Dashboard] Returning cached data");
     return res.status(200).json({
       snapshot: cache.data,
       stale: false,
@@ -388,21 +434,25 @@ export default async function handler(req, res) {
   try {
     const data = await buildDashboardData();
     
-    cache = {
-      data,
-      fetchedAt: new Date().toISOString(),
-      expiresAt: now + CACHE_TTL_MS,
-    };
+    // Only cache if we got actual data
+    if (data.forecast.length > 0) {
+      cache = {
+        data,
+        fetchedAt: new Date().toISOString(),
+        expiresAt: now + CACHE_TTL_MS,
+      };
+    }
     
     return res.status(200).json({
       snapshot: data,
       stale: false,
-      fetchedAt: cache.fetchedAt,
+      fetchedAt: new Date().toISOString(),
       source: "huggingface",
     });
   } catch (error) {
-    console.error("Dashboard error:", error);
+    console.error("[Dashboard] Fatal error:", error);
     
+    // Return stale cache if available
     if (cache.data) {
       return res.status(200).json({
         snapshot: cache.data,
@@ -415,6 +465,7 @@ export default async function handler(req, res) {
     
     return res.status(503).json({
       error: error instanceof Error ? error.message : "Failed to fetch data from Hugging Face",
+      hint: "Check HF_TOKEN environment variable if datasets are private",
     });
   }
 }
