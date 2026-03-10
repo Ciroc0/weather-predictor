@@ -83,13 +83,21 @@ export default async function handler(req, res) {
     
     console.log(`[Dashboard] Latest reference time: ${latestRefTime}`);
     
-    // Build forecast array (next 48 hours from latest prediction)
+    // Build forecast array from latest reference time
     const forecast = [];
-    const futurePreds = sortedPreds.filter(p => 
-      p.reference_time === latestRefTime && new Date(p.timestamp) >= now
-    ).slice(0, 48);
+    // Get all predictions from latest reference time
+    let latestPreds = sortedPreds.filter(p => p.reference_time === latestRefTime);
     
-    for (const p of futurePreds) {
+    // If we have future predictions, use those. Otherwise use all from latest ref time
+    const futurePreds = latestPreds.filter(p => new Date(p.timestamp) >= now);
+    const predsToUse = futurePreds.length > 0 ? futurePreds : latestPreds;
+    
+    console.log(`[Dashboard] Latest ref: ${latestRefTime}, total: ${latestPreds.length}, future: ${futurePreds.length}, using: ${predsToUse.length}`);
+    
+    // Take up to 48 hours
+    const selectedPreds = predsToUse.slice(0, 48);
+    
+    for (const p of selectedPreds) {
       // Use ml_pred if available, otherwise fall back to dmi
       const hasMl = p.ml_pred != null && !isNaN(p.ml_pred);
       
