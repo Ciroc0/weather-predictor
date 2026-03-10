@@ -265,9 +265,9 @@ export function WindTab({
                 {forecastBoundaryLabel ? (
                   <ReferenceLine
                     x={forecastBoundaryLabel}
-                    stroke="currentColor"
-                    strokeDasharray="4 4"
-                    label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
+                    stroke="#475569"
+                    strokeWidth={2}
+                    label={{ value: "Nu / forecast", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
                 <Line type="monotone" dataKey="actualSpeed" name="Actual Wind" stroke="#111827" strokeWidth={2} dot={false} />

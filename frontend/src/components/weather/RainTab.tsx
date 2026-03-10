@@ -251,9 +251,9 @@ export function RainTab({
                 {forecastBoundaryLabel ? (
                   <ReferenceLine
                     x={forecastBoundaryLabel}
-                    stroke="currentColor"
-                    strokeDasharray="4 4"
-                    label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
+                    stroke="#475569"
+                    strokeWidth={2}
+                    label={{ value: "Nu / forecast", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
                 <Line type="monotone" dataKey="actualProb" name="Actual Rain" stroke="#111827" strokeWidth={2} dot={false} />
@@ -302,9 +302,9 @@ export function RainTab({
                 {forecastBoundaryLabel ? (
                   <ReferenceLine
                     x={forecastBoundaryLabel}
-                    stroke="currentColor"
-                    strokeDasharray="4 4"
-                    label={{ value: "Nu / forecast", position: "top", fontSize: 10, fill: "currentColor" }}
+                    stroke="#475569"
+                    strokeWidth={2}
+                    label={{ value: "Nu / forecast", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
                 <Bar dataKey="actualAmount" name="Actual Rain Amount" fill="#cbd5e1" radius={[3, 3, 0, 0]} />
