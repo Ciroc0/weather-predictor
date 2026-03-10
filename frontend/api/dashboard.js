@@ -31,12 +31,17 @@ async function parseParquet(arrayBuffer) {
 
 // Fetch history snapshot JSON from HF
 async function fetchHistorySnapshot() {
-  const url = `https://huggingface.co/datasets/${HF_DATASET_PREDICTIONS}/resolve/main/history_snapshot.json`;
+  // Add cache-buster to avoid HF caching
+  const cacheBuster = Date.now();
+  const url = `https://huggingface.co/datasets/${HF_DATASET_PREDICTIONS}/resolve/main/history_snapshot.json?_cb=${cacheBuster}`;
   
   console.log(`[HF API] Fetching history snapshot`);
   
   const response = await fetch(url, {
-    headers: { "Accept": "application/json" },
+    headers: { 
+      "Accept": "application/json",
+      "Cache-Control": "no-cache",
+    },
   });
   
   if (!response.ok) {
@@ -45,7 +50,7 @@ async function fetchHistorySnapshot() {
   }
   
   const data = await response.json();
-  console.log(`[HF API] Got history snapshot with ${data.snapshot?.history?.temperature?.length || 0} temperature entries`);
+  console.log(`[HF API] Got history snapshot with ${data.snapshot?.history?.temperature?.length || 0} temperature entries, ${data.snapshot?.leadBuckets?.length || 0} lead buckets`);
   
   return data.snapshot || null;
 }
