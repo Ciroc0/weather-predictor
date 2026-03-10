@@ -269,7 +269,7 @@ export function TemperatureTab({
         <h3 className="mb-4 text-lg font-semibold">Naeste 16 timer</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
           {forecast.slice(0, 16).map((hour, index) => (
-            <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
+            <Card key={hour.hour} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
               <CardContent className="p-3 text-center">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>

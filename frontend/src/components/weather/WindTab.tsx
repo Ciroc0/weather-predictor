@@ -370,7 +370,7 @@ export function WindTab({
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
           {forecast.slice(0, 12).map((hour) => (
-            <div key={hour.timestamp} className="flex flex-col items-center">
+            <div key={hour.hour} className="flex flex-col items-center">
               <WindCompass direction={hour.windDirection} size={64} />
               <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</span>
               <Badge variant={hour.effectiveWindSpeedSource === "ml" ? "default" : "secondary"} className="mt-1">

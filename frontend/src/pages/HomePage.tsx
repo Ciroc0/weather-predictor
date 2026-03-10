@@ -70,7 +70,7 @@ export function HomePage() {
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {preview.map((hour) => (
               <div
-                key={hour.timestamp}
+                key={hour.hour}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
                 <div className="flex items-center justify-between gap-2">
