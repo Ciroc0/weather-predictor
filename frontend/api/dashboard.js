@@ -35,6 +35,7 @@ async function fetchParquetBuffer(dataset, file) {
 
 async function parseParquet(buffer) {
   const rows = [];
+  let schema = null;
   
   await parquetRead({
     file: buffer,
@@ -42,6 +43,12 @@ async function parseParquet(buffer) {
       rows.push(...data);
     },
   });
+  
+  // Log first row to see column names
+  if (rows.length > 0) {
+    console.log("[Parse] First row keys:", Object.keys(rows[0]));
+    console.log("[Parse] Sample row:", JSON.stringify(rows[0]).substring(0, 500));
+  }
   
   return rows;
 }
@@ -51,6 +58,14 @@ function buildForecast(predictionsRows) {
   const now = new Date();
   
   console.log(`[Build] Processing ${predictionsRows.length} prediction rows`);
+  
+  // Debug: check first row
+  if (predictionsRows.length > 0) {
+    const firstRow = predictionsRows[0];
+    console.log("[Build] First row target_timestamp:", firstRow.target_timestamp);
+    console.log("[Build] First row dmi_temperature_2m_pred:", firstRow.dmi_temperature_2m_pred);
+    console.log("[Build] First row ml_temp:", firstRow.ml_temp);
+  }
   
   for (const row of predictionsRows) {
     const targetTime = new Date(row.target_timestamp);
