@@ -131,6 +131,9 @@ export default async function handler(req, res) {
     const predsToUse = futurePreds.length > 0 ? futurePreds : latestPreds;
     const selectedPreds = predsToUse.slice(0, 48);
     
+    // Build forecast array
+    const forecast = [];
+    
     for (const p of selectedPreds) {
       const ts = p.timestamp || p.target_timestamp;
       
