@@ -255,8 +255,8 @@ export default async function handler(req, res) {
     const hasMlTemp = forecast.some(p => p.mlTemp !== null);
     const hasMlWind = forecast.some(p => p.mlWindSpeed !== null);
     const hasMlGust = forecast.some(p => p.mlWindGust !== null);
-    const hasMlRain = forecast.some(p => p.mlRainProb !== null && p.mlRainProb > 0);
-    const hasMlRainAmount = forecast.some(p => p.mlRainAmount !== null && p.mlRainAmount > 0);
+    const hasMlRain = forecast.some(p => p.mlRainProb !== null);
+    const hasMlRainAmount = forecast.some(p => p.mlRainAmount !== null);
     
     const targetStatus = {
       temperature: {
