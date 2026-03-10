@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { motion } from "framer-motion";
 import { Info, Thermometer, TrendingDown } from "lucide-react";
 import {
@@ -14,8 +14,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+
 import {
   Tooltip as UiTooltip,
   TooltipContent,
@@ -65,9 +64,10 @@ export function TemperatureTab({
 }: TemperatureTabProps) {
   const hasMlSeries = targetStatus.hasActiveModel && forecast.some((point) => point.mlTemp !== null);
   const hasHistory = history.length > 0;
-  const [showDmi, setShowDmi] = useState(true);
-  const [showMl, setShowMl] = useState(hasMlSeries);
-  const [showApparent, setShowApparent] = useState(true);
+  // Always show all data series
+  const showDmi = true;
+  const showMl = hasMlSeries;
+  const showApparent = true;
 
   const timelineData: TemperatureTimelinePoint[] = [
     ...history.map((point) => ({
@@ -185,19 +185,10 @@ export function TemperatureTab({
               <Thermometer className="h-5 w-5 text-slate-500" />
               Sidste 7 dage + naeste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch id="temp-dmi" checked={showDmi} onCheckedChange={setShowDmi} />
-                <Label htmlFor="temp-dmi">DMI</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="temp-ml" checked={showMl} onCheckedChange={setShowMl} disabled={!hasMlSeries} />
-                <Label htmlFor="temp-ml">ML</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="temp-apparent" checked={showApparent} onCheckedChange={setShowApparent} />
-                <Label htmlFor="temp-apparent">Foeles som</Label>
-              </div>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>

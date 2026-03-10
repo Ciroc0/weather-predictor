@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { motion } from "framer-motion";
 import { AlertTriangle, Navigation, Wind } from "lucide-react";
 import {
@@ -15,8 +15,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+
 import {
   formatDanishTime,
   formatShortDate,
@@ -91,9 +90,10 @@ export function WindTab({
 }: WindTabProps) {
   const hasMlSpeed = windStatus.hasActiveModel && forecast.some((point) => point.mlWindSpeed !== null);
   const hasMlGust = gustStatus.hasActiveModel && forecast.some((point) => point.mlWindGust !== null);
-  const [showDmi, setShowDmi] = useState(true);
-  const [showMl, setShowMl] = useState(hasMlSpeed);
-  const [showGusts, setShowGusts] = useState(true);
+  // Always show all data series
+  const showDmi = true;
+  const showMl = hasMlSpeed;
+  const showGusts = true;
 
   const timelineData: WindTimelinePoint[] = [
     ...history.map((point) => ({
@@ -247,19 +247,10 @@ export function WindTab({
               <Wind className="h-5 w-5 text-slate-500" />
               Sidste 7 dage + naeste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch id="wind-dmi" checked={showDmi} onCheckedChange={setShowDmi} />
-                <Label htmlFor="wind-dmi">DMI</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="wind-ml" checked={showMl} onCheckedChange={setShowMl} disabled={!hasMlSpeed} />
-                <Label htmlFor="wind-ml">ML</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="wind-gusts" checked={showGusts} onCheckedChange={setShowGusts} />
-                <Label htmlFor="wind-gusts">Vis vindstoed</Label>
-              </div>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-800"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
