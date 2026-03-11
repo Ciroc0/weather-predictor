@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -151,11 +151,11 @@ function calculateErrors(
 ): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
   if (section === "temperature") {
     return history.temperature
-      .filter((p) => p.actualTemp !== null)
+      .filter((p) => p.actual !== null)
       .map((p) => ({
         time: formatShortDate(p.timestamp),
-        dmiError: p.dmiTemp !== null ? Math.abs(p.dmiTemp - (p.actualTemp ?? 0)) : null,
-        mlError: p.mlTemp !== null ? Math.abs(p.mlTemp - (p.actualTemp ?? 0)) : null,
+        dmiError: p.dmiTemp !== null ? Math.abs(p.dmiTemp - (p.actual ?? 0)) : null,
+        mlError: p.mlTemp !== null ? Math.abs(p.mlTemp - (p.actual ?? 0)) : null,
       }));
   }
   if (section === "wind") {
@@ -208,6 +208,27 @@ export function PerformanceTab({
   explanations,
 }: PerformanceTabProps) {
   const [section, setSection] = useState<PerformanceSection>("temperature");
+
+  // Debug: Log history data
+  useEffect(() => {
+    console.log("PerformanceTab history:", {
+      temperature: history.temperature.length,
+      wind: history.wind.length,
+      rain: history.rain.length,
+    });
+    if (history.temperature.length > 0) {
+      console.log("First temp history keys:", Object.keys(history.temperature[0]));
+      console.log("First temp history:", history.temperature[0]);
+    }
+    if (history.wind.length > 0) {
+      console.log("First wind history keys:", Object.keys(history.wind[0]));
+      console.log("First wind history:", history.wind[0]);
+    }
+    if (history.rain.length > 0) {
+      console.log("First rain history keys:", Object.keys(history.rain[0]));
+      console.log("First rain history:", history.rain[0]);
+    }
+  }, [history]);
 
   const improvement =
     verification.rmseDmi !== null && verification.rmseMl !== null && verification.rmseDmi > 0
@@ -379,7 +400,7 @@ export function PerformanceTab({
                       time: formatShortDate(point.timestamp),
                       dmi: point.dmiTemp,
                       ml: point.mlTemp,
-                      actual: point.actualTemp,
+                      actual: point.actual,
                     }))}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />

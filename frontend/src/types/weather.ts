@@ -115,7 +115,7 @@ export interface HistoricalTemperaturePoint {
   timestamp: string;
   dmiTemp: number | null;
   mlTemp: number | null;
-  actualTemp: number | null;
+  actual: number | null;
   verified: boolean;
 }
 

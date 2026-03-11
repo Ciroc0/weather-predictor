@@ -97,6 +97,12 @@ export function WindTab({
   const showMlGust = hasMlGust;
   const showGusts = true;
 
+  // Debug: Log alle keys i første history objekt
+  if (history.length > 0) {
+    console.log("WindTab first history keys:", Object.keys(history[0]));
+    console.log("WindTab first history:", history[0]);
+  }
+
   const timelineData: WindTimelinePoint[] = [
     ...history.map((point) => ({
       time: formatShortDate(point.timestamp),

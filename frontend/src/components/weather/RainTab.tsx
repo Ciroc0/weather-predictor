@@ -64,6 +64,12 @@ export function RainTab({
   const currentRain = forecast[0];
   const hasHistory = history.length > 0;
 
+  // Debug: Log alle keys i første history objekt
+  if (history.length > 0) {
+    console.log("RainTab first history keys:", Object.keys(history[0]));
+    console.log("RainTab first history:", history[0]);
+  }
+
   const timelineData: RainTimelinePoint[] = [
     ...history.map((point) => ({
       time: formatShortDate(point.timestamp),
