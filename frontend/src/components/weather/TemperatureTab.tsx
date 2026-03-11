@@ -191,7 +191,7 @@ export function TemperatureTab({
             <div className="flex items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-900"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -212,7 +212,7 @@ export function TemperatureTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#111827" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                 ) : null}
                 {showDmi ? (
                   <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
@@ -242,6 +242,9 @@ export function TemperatureTab({
           </div>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiForecast !== null || d.mlForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -286,7 +289,7 @@ export function TemperatureTab({
 
       <div>
         <h3 className="mb-4 text-lg font-semibold">Næste 16 timer</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {forecast.slice(0, 16).map((hour, index) => (
             <Card key={hour.hour} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
               <CardContent className="p-3 text-center">

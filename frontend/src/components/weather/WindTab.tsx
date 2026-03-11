@@ -253,7 +253,7 @@ export function WindTab({
             <div className="flex items-center gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-900"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -274,7 +274,7 @@ export function WindTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Line type="monotone" dataKey="actualSpeed" name="Faktisk vind" stroke="#111827" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="actualSpeed" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                 ) : null}
                 {showDmi ? (
                   <Line type="monotone" dataKey="dmiSpeedHistory" name="DMI Backtest" stroke="#3b82f6" strokeWidth={2} dot={false} />
@@ -303,6 +303,9 @@ export function WindTab({
           </div>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiSpeedForecast !== null || d.mlSpeedForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -349,7 +352,7 @@ export function WindTab({
                 <div className="flex items-center gap-4 text-sm text-slate-500">
                   <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> DMI</span>
                   <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> ML</span>
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-gray-900"></span> Faktisk</span>
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
                 </div>
               </div>
             </CardHeader>
@@ -370,7 +373,7 @@ export function WindTab({
                       />
                     ) : null}
                     {hasHistory ? (
-                      <Line type="monotone" dataKey="actualGust" name="Faktisk vindstød" stroke="#111827" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="actualGust" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                     ) : null}
                     {showDmi ? (
                       <Line type="monotone" dataKey="dmiGustHistory" name="DMI Backtest" stroke="#f59e0b" strokeWidth={2} dot={false} />
@@ -399,6 +402,9 @@ export function WindTab({
               </div>
             </CardHeader>
             <CardContent>
+              <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+                Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+              </p>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={timelineData.filter(d => d.dmiGustForecast !== null || d.mlGustForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -438,7 +444,7 @@ export function WindTab({
         <CardHeader>
           <CardTitle className="text-base">Vindretning de næste 12 timer</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
+        <CardContent className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
           {forecast.slice(0, 12).map((hour) => (
             <div key={hour.hour} className="flex flex-col items-center">
               <WindCompass direction={hour.windDirection} size={64} />

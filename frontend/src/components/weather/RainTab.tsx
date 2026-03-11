@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Cloud, CloudRain, Droplets, Info, Sun, Umbrella } from "lucide-react";
+import { Cloud, CloudRain, Droplets, Sun, Umbrella } from "lucide-react";
 import {
   Bar,
   CartesianGrid,
@@ -14,12 +14,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tooltip as UiTooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { formatDanishTime, formatShortDate, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
@@ -224,24 +218,16 @@ export function RainTab({
       {/* Rain Probability Backtest */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <CloudRain className="h-5 w-5 text-slate-500" />
               Regnrisiko backtest - Sidste 7 dage
             </CardTitle>
-            <TooltipProvider>
-              <UiTooltip>
-                <TooltipTrigger asChild>
-                  <button className="text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300">
-                    <Info className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-sm">
-                  Søjler viser faktisk regn i historikken (100% = regn, 0% = tørt). 
-                  Faste linjer viser DMI og ML prognoser for de samme tidspunkter.
-                </TooltipContent>
-              </UiTooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -274,12 +260,21 @@ export function RainTab({
       {/* Rain Probability Forecast */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <CloudRain className="h-5 w-5 text-slate-500" />
-            Regnrisiko forecast - Næste 48 timer
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CloudRain className="h-5 w-5 text-slate-500" />
+              Regnrisiko forecast - Næste 48 timer
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -312,10 +307,17 @@ export function RainTab({
       {/* Rain Amount Backtest */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <Droplets className="h-5 w-5 text-slate-500" />
-            Regnmængde backtest - Sidste 7 dage
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-slate-500" />
+              Regnmængde backtest - Sidste 7 dage
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-sky-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-400"></span> Faktisk</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-slate-600 dark:text-slate-400">{rainAmountStatus.statusDescription}</p>
@@ -348,12 +350,21 @@ export function RainTab({
       {/* Rain Amount Forecast */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <Droplets className="h-5 w-5 text-slate-500" />
-            Regnmængde forecast - Næste 48 timer
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-slate-500" />
+              Regnmængde forecast - Næste 48 timer
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-sky-500"></span> ML</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
