@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CloudRain, Thermometer, Wind } from "lucide-react";
 
+import { PageIntro } from "@/components/PageIntro";
+import { SeoHead } from "@/components/SeoHead";
 import { WeatherHero } from "@/components/weather/WeatherHero";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardOutlet } from "@/hooks/useDashboardOutlet";
+import { homeSeo } from "@/lib/seo";
 import {
   formatDanishDate,
   formatDanishTime,
@@ -15,9 +18,27 @@ import {
 } from "@/lib/weather";
 
 const quickLinks = [
-  { href: "/temperatur", label: "Temperatur", icon: Thermometer },
-  { href: "/vind", label: "Vind", icon: Wind },
-  { href: "/regn", label: "Regn", icon: CloudRain },
+  {
+    href: "/temperatur",
+    label: "Temperatur",
+    icon: Thermometer,
+    description:
+      "Se temperaturprognosen for Aarhus og sammenlign DMI med ML i både forecast og historisk backtest.",
+  },
+  {
+    href: "/vind",
+    label: "Vind",
+    icon: Wind,
+    description:
+      "Få overblik over vindhastighed, vindstød og vindretning i Aarhus med lokale modeljusteringer.",
+  },
+  {
+    href: "/regn",
+    label: "Regn",
+    icon: CloudRain,
+    description:
+      "Følg regnrisiko, regnmængde og mulige tørre perioder i Aarhus med DMI og ML side om side.",
+  },
 ];
 
 export function HomePage() {
@@ -28,6 +49,33 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
+      <SeoHead config={homeSeo} />
+
+      <PageIntro
+        title="Aarhus Vejr: sammenlign ML og DMI for Aarhus"
+        paragraphs={[
+          "Aarhus Vejr samler temperatur, vind, regn og modelperformance på ét sted, så du kan se forskellen mellem DMI's prognoser og vores lokale ML-justeringer.",
+          "Siden er bygget til Aarhus og opdateres løbende med nye snapshots, historisk verifikation og forklaringer, så tallene bliver lettere at vurdere i praksis.",
+        ]}
+        relatedLinks={[
+          {
+            to: "/temperatur",
+            label: "Temperatur i Aarhus",
+            description: "Se temperaturgrafen, backtest og hvornår ML ligger over eller under DMI.",
+          },
+          {
+            to: "/vind",
+            label: "Vind og vindstød i Aarhus",
+            description: "Undersøg vindretning, vindstyrke og lokale udsving i Aarhus.",
+          },
+          {
+            to: "/performance",
+            label: "Modelperformance",
+            description: "Følg RMSE, MAE og win rate for at se om ML faktisk rammer bedre end DMI.",
+          },
+        ]}
+      />
+
       <WeatherHero
         current={snapshot.current}
         generatedAt={snapshot.generatedAt}
@@ -49,8 +97,8 @@ export function HomePage() {
                   <CardTitle className="text-lg">{link.label}</CardTitle>
                   <Icon className="h-5 w-5 text-slate-500" />
                 </CardHeader>
-                <CardContent className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                  <span>Se både DMI og ML, og få forklaret hvad forskellen betyder.</span>
+                <CardContent className="flex items-center justify-between gap-4 text-sm text-slate-600 dark:text-slate-400">
+                  <span>{link.description}</span>
                   <ArrowRight className="h-4 w-4 flex-none" />
                 </CardContent>
               </Card>
@@ -63,7 +111,7 @@ export function HomePage() {
         <Card className="border-slate-200 dark:border-slate-800">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle>Næste 12 timer</CardTitle>
+              <CardTitle>Næste 12 timer i Aarhus</CardTitle>
               <Badge variant="secondary">{getTemperatureImprovementText(snapshot.verification)}</Badge>
             </div>
           </CardHeader>
@@ -73,9 +121,12 @@ export function HomePage() {
                 key={hour.timestamp}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="mb-1 flex items-center justify-between gap-1">
                   <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.timestamp)}</p>
-                  <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"} className="text-[9px] px-1 py-0 h-4 min-w-0">
+                  <Badge
+                    variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}
+                    className="h-4 min-w-0 px-1 py-0 text-[9px]"
+                  >
                     {hour.effectiveTempSource === "ml" ? "ML" : "DMI"}
                   </Badge>
                 </div>
@@ -154,7 +205,10 @@ export function HomePage() {
                   ? formatDanishDate(snapshot.modelInfo.trainedAt)
                   : "Under udvikling"}
               </p>
-              <p>Antal vejrobservationer brugt til træning: {snapshot.modelInfo.trainingSamples?.toLocaleString("da-DK") || "Ikke tilgængelig endnu"}</p>
+              <p>
+                Antal vejrobservationer brugt til træning:{" "}
+                {snapshot.modelInfo.trainingSamples?.toLocaleString("da-DK") || "Ikke tilgængelig endnu"}
+              </p>
               <p>{snapshot.explanations.performance}</p>
             </CardContent>
           </Card>

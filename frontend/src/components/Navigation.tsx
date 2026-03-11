@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart3, Cloud, CloudRain, Menu, Moon, RefreshCw, Share2, Sun, Thermometer, Wind, X } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
@@ -50,7 +50,7 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 shadow-lg">
             <Cloud className="h-5 w-5 text-white" />
           </div>
@@ -60,7 +60,7 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
               {isStale ? "Forbindelse til Hugging Face" : "Direkte fra Hugging Face"}
             </p>
           </div>
-        </div>
+        </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
           {navItems.map((item) => {

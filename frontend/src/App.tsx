@@ -1,16 +1,23 @@
 import "./App.css";
 
+import { Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "@/components/AppLayout";
+import { PageState } from "@/components/PageState";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
-import { HomePage } from "@/pages/HomePage";
-import { PerformancePage } from "@/pages/PerformancePage";
-import { RainPage } from "@/pages/RainPage";
-import { TemperaturePage } from "@/pages/TemperaturePage";
-import { WindPage } from "@/pages/WindPage";
+
+const HomePage = lazy(() => import("@/pages/HomePage").then((module) => ({ default: module.HomePage })));
+const TemperaturePage = lazy(() =>
+  import("@/pages/TemperaturePage").then((module) => ({ default: module.TemperaturePage })),
+);
+const WindPage = lazy(() => import("@/pages/WindPage").then((module) => ({ default: module.WindPage })));
+const RainPage = lazy(() => import("@/pages/RainPage").then((module) => ({ default: module.RainPage })));
+const PerformancePage = lazy(() =>
+  import("@/pages/PerformancePage").then((module) => ({ default: module.PerformancePage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +28,16 @@ const queryClient = new QueryClient({
   },
 });
 
+function RouteFallback() {
+  return (
+    <PageState
+      mode="loading"
+      title="Indlæser side"
+      description="Sideindhold og grafer klargøres nu."
+    />
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -28,11 +45,46 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AppLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="temperatur" element={<TemperaturePage />} />
-              <Route path="vind" element={<WindPage />} />
-              <Route path="regn" element={<RainPage />} />
-              <Route path="performance" element={<PerformancePage />} />
+              <Route
+                index
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <HomePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="temperatur"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <TemperaturePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="vind"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <WindPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="regn"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <RainPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="performance"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <PerformancePage />
+                  </Suspense>
+                }
+              />
             </Route>
           </Routes>
         </BrowserRouter>

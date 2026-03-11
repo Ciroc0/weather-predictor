@@ -1,0 +1,27 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="32" fill="#0F172A" />
+  <rect x="40" y="40" width="1120" height="550" rx="28" fill="url(#paint0_linear_1_2)" />
+  <rect x="72" y="72" width="1056" height="486" rx="24" fill="#F8FAFC" fill-opacity="0.08" />
+  <circle cx="172" cy="144" r="54" fill="#0EA5E9" />
+  <path d="M200 166C222.091 166 240 148.091 240 126C240 103.909 222.091 86 200 86C182.993 86 168.462 96.5811 162.643 111.5C159.626 110.541 156.418 110 153.083 110C135.431 110 121 124.431 121 142.083C121 159.735 135.431 174.166 153.083 174.166H200V166Z" fill="#F8FAFC"/>
+  <text x="72" y="270" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="76" font-weight="700">
+    Aarhus Vejr
+  </text>
+  <text x="72" y="340" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="34">
+    Sammenlign DMI og ML for temperatur, vind, regn
+  </text>
+  <text x="72" y="386" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="34">
+    og modelpraecision i Aarhus.
+  </text>
+  <rect x="72" y="454" width="232" height="60" rx="18" fill="#0EA5E9" />
+  <text x="106" y="493" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="28" font-weight="700">
+    www.vqpon.dk
+  </text>
+  <defs>
+    <linearGradient id="paint0_linear_1_2" x1="40" y1="40" x2="1160" y2="590" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A" />
+      <stop offset="0.5" stop-color="#155E75" />
+      <stop offset="1" stop-color="#047857" />
+    </linearGradient>
+  </defs>
+</svg>
