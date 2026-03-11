@@ -273,14 +273,14 @@ export function WindTab({
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
-                {hasHistory ? (
-                  <Line type="monotone" dataKey="actualSpeed" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={3} dot={false} />
-                ) : null}
                 {showDmi ? (
                   <Line type="monotone" dataKey="dmiSpeedHistory" name="DMI Backtest" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 ) : null}
                 {showMlSpeed ? (
                   <Line type="monotone" dataKey="mlSpeedHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                ) : null}
+                {hasHistory ? (
+                  <Line type="monotone" dataKey="actualSpeed" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={4} dot={false} />
                 ) : null}
               </ComposedChart>
             </ResponsiveContainer>
@@ -372,14 +372,14 @@ export function WindTab({
                         label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                       />
                     ) : null}
-                    {hasHistory ? (
-                      <Line type="monotone" dataKey="actualGust" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={3} dot={false} />
-                    ) : null}
                     {showDmi ? (
                       <Line type="monotone" dataKey="dmiGustHistory" name="DMI Backtest" stroke="#f59e0b" strokeWidth={2} dot={false} />
                     ) : null}
                     {showMlGust ? (
                       <Line type="monotone" dataKey="mlGustHistory" name="ML Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
+                    ) : null}
+                    {hasHistory ? (
+                      <Line type="monotone" dataKey="actualGust" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={4} dot={false} />
                     ) : null}
                   </ComposedChart>
                 </ResponsiveContainer>

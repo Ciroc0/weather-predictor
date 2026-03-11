@@ -9,7 +9,6 @@ import {
   formatDanishTime,
   getAlertSummary,
   getForecastPreview,
-  getSourceLabel,
   getTargetStatusSummary,
   getTemperatureImprovementText,
 } from "@/lib/weather";
@@ -73,10 +72,10 @@ export function HomePage() {
                 key={hour.hour}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-1 mb-1">
                   <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>
-                  <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}>
-                    {getSourceLabel(hour.effectiveTempSource)}
+                  <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"} className="text-[9px] px-1 py-0 h-4 min-w-0">
+                    {hour.effectiveTempSource === "ml" ? "ML" : "DMI"}
                   </Badge>
                 </div>
                 <p className="mt-2 text-2xl font-semibold">

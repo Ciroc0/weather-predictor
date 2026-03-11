@@ -388,7 +388,7 @@ export function PerformanceTab({
                     <Tooltip content={<HistoryTooltip suffix="°C" />} />
                     <Line type="monotone" dataKey="dmi" name="DMI-prognose" stroke="#64748b" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="ml" name="ML-prognose" stroke="#10b981" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="actual" name="Faktisk vejr" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="actual" name="Faktisk vejr" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -416,7 +416,7 @@ export function PerformanceTab({
                       <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
                       <Line type="monotone" dataKey="dmi" name="DMI vind" stroke="#64748b" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="ml" name="ML vind" stroke="#10b981" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -436,7 +436,7 @@ export function PerformanceTab({
                       <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
                       <Line type="monotone" dataKey="dmi" name="DMI vindstød" stroke="#64748b" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="ml" name="ML vindstød" stroke="#ef4444" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -465,7 +465,7 @@ export function PerformanceTab({
                       <Tooltip content={<HistoryTooltip suffix="%" />} />
                       <Line type="monotone" dataKey="dmi" name="DMI regnrisiko" stroke="#64748b" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="ml" name="ML regnrisiko" stroke="#10b981" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regn" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk regn" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -485,7 +485,7 @@ export function PerformanceTab({
                       <Tooltip content={<HistoryTooltip suffix=" mm" />} />
                       <Line type="monotone" dataKey="dmi" name="DMI regnmængde" stroke="#64748b" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="ml" name="ML regnmængde" stroke="#0ea5e9" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#8b5cf6" strokeWidth={3} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

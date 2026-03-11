@@ -211,14 +211,14 @@ export function TemperatureTab({
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
                   />
                 ) : null}
-                {hasHistory ? (
-                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#8b5cf6" strokeWidth={3} dot={false} />
-                ) : null}
                 {showDmi ? (
                   <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
                 ) : null}
                 {showMl && hasMlSeries ? (
                   <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                ) : null}
+                {hasHistory ? (
+                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#8b5cf6" strokeWidth={4} dot={false} />
                 ) : null}
               </ComposedChart>
             </ResponsiveContainer>

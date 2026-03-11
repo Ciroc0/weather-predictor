@@ -247,7 +247,7 @@ export function RainTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Bar dataKey="actualProb" name="Faktisk regn" fill="#64748b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="actualProb" name="Faktisk regn" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
                 ) : null}
                 <Line type="monotone" dataKey="dmiProbHistory" name="DMI Backtest" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="mlProbHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -337,7 +337,7 @@ export function RainTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Bar dataKey="actualAmount" name="Faktisk regnmængde" fill="#cbd5e1" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="actualAmount" name="Faktisk regnmængde" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
                 ) : null}
                 <Line type="monotone" dataKey="dmiAmountHistory" name="DMI Backtest" stroke="#f59e0b" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="mlAmountHistory" name="ML Backtest" stroke="#0ea5e9" strokeWidth={2} dot={false} />
