@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDanishTime,
   formatShortDate,
+  formatTooltipDateTime,
   getSourceLabel,
   getWindDirectionLabel,
 } from "@/lib/weather";
@@ -40,7 +41,7 @@ interface WindTabProps {
 }
 
 interface WindTimelinePoint {
-  time: string;
+  timeKey: string;
   actualSpeed: number | null;
   dmiSpeedHistory: number | null;
   mlSpeedHistory: number | null;
@@ -99,7 +100,7 @@ export function WindTab({
 
   const timelineData: WindTimelinePoint[] = [
     ...history.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      timeKey: point.timestamp,
       actualSpeed: point.actualWindSpeed,
       dmiSpeedHistory: point.dmiWindSpeed,
       mlSpeedHistory: point.mlWindSpeed,
@@ -112,7 +113,7 @@ export function WindTab({
       mlGustForecast: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.hour),
+      timeKey: point.timestamp,
       actualSpeed: null,
       dmiSpeedHistory: null,
       mlSpeedHistory: null,
@@ -128,7 +129,7 @@ export function WindTab({
 
   const warning = alerts.find((alert) => alert.type === "wind");
   const currentWind = forecast[0];
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
+  const forecastBoundaryTimestamp = forecast[0]?.timestamp ?? null;
 
   const CustomTooltip = ({
     active,
@@ -145,7 +146,7 @@ export function WindTab({
 
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <p className="mb-2 font-medium">{label}</p>
+        <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -262,12 +263,18 @@ export function WindTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.actualSpeed !== null || d.dmiSpeedHistory !== null || d.mlSpeedHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
-                {forecastBoundaryLabel ? (
+                {forecastBoundaryTimestamp ? (
                   <ReferenceLine
-                    x={forecastBoundaryLabel}
+                    x={forecastBoundaryTimestamp}
                     stroke="#475569"
                     strokeWidth={2}
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
@@ -313,7 +320,13 @@ export function WindTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiSpeedForecast !== null || d.mlSpeedForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
@@ -366,12 +379,18 @@ export function WindTab({
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={timelineData.filter(d => d.actualGust !== null || d.dmiGustHistory !== null || d.mlGustHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                    <XAxis
+                      dataKey="timeKey"
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(value: string) => formatShortDate(value)}
+                      tickMargin={8}
+                      interval={5}
+                    />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                     <Tooltip content={<CustomTooltip />} />
-                    {forecastBoundaryLabel ? (
+                    {forecastBoundaryTimestamp ? (
                       <ReferenceLine
-                        x={forecastBoundaryLabel}
+                        x={forecastBoundaryTimestamp}
                         stroke="#475569"
                         strokeWidth={2}
                         label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
@@ -414,7 +433,13 @@ export function WindTab({
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={timelineData.filter(d => d.dmiGustForecast !== null || d.mlGustForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                    <XAxis
+                      dataKey="timeKey"
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(value: string) => formatShortDate(value)}
+                      tickMargin={8}
+                      interval={3}
+                    />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                     <Tooltip content={<CustomTooltip />} />
                     {showDmi ? (
@@ -453,9 +478,9 @@ export function WindTab({
         </CardHeader>
         <CardContent className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
           {forecast.slice(0, 12).map((hour) => (
-            <div key={hour.hour} className="flex flex-col items-center">
+            <div key={hour.timestamp} className="flex flex-col items-center">
               <WindCompass direction={hour.windDirection} size={64} />
-              <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</span>
+              <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.timestamp)}</span>
               <Badge variant={hour.effectiveWindSpeedSource === "ml" ? "default" : "secondary"} className="mt-1">
                 {getSourceLabel(hour.effectiveWindSpeedSource)}
               </Badge>

@@ -14,7 +14,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDanishTime, formatShortDate, getSourceLabel } from "@/lib/weather";
+import { formatDanishTime, formatShortDate, formatTooltipDateTime, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
   HistoricalRainPoint,
@@ -33,7 +33,7 @@ interface RainTabProps {
 }
 
 interface RainTimelinePoint {
-  time: string;
+  timeKey: string;
   actualProb: number | null;
   dmiProbHistory: number | null;
   mlProbHistory: number | null;
@@ -66,7 +66,7 @@ export function RainTab({
 
   const timelineData: RainTimelinePoint[] = [
     ...history.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      timeKey: point.timestamp,
       actualProb: point.actualRainEvent !== null ? point.actualRainEvent * 100 : null,
       dmiProbHistory: point.dmiRainProb,
       mlProbHistory: point.mlRainProb,
@@ -79,7 +79,7 @@ export function RainTab({
       mlAmountForecast: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.hour),
+      timeKey: point.timestamp,
       actualProb: null,
       dmiProbHistory: null,
       mlProbHistory: null,
@@ -94,7 +94,7 @@ export function RainTab({
   ];
 
   const rainAlert = alerts.find((alert) => alert.type === "rain");
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
+  const forecastBoundaryTimestamp = forecast[0]?.timestamp ?? null;
   const dryPeriods = forecast
     .reduce<{ start: number; end: number; hours: number }[]>((periods, point, index, all) => {
       const isDry = point.effectiveRainProb < 20;
@@ -127,7 +127,7 @@ export function RainTab({
 
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <p className="mb-2 font-medium">{label}</p>
+        <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -235,12 +235,18 @@ export function RainTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
+                />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                 <Tooltip content={<CustomTooltip />} />
-                {forecastBoundaryLabel ? (
+                {forecastBoundaryTimestamp ? (
                   <ReferenceLine
-                    x={forecastBoundaryLabel}
+                    x={forecastBoundaryTimestamp}
                     stroke="#475569"
                     strokeWidth={2}
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
@@ -279,7 +285,13 @@ export function RainTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
+                />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
@@ -330,12 +342,18 @@ export function RainTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
-                {forecastBoundaryLabel ? (
+                {forecastBoundaryTimestamp ? (
                   <ReferenceLine
-                    x={forecastBoundaryLabel}
+                    x={forecastBoundaryTimestamp}
                     stroke="#475569"
                     strokeWidth={2}
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
@@ -374,7 +392,13 @@ export function RainTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
@@ -421,10 +445,10 @@ export function RainTab({
                   </div>
                   <div>
                     <p className="font-medium">
-                      kl. {formatDanishTime(forecast[period.start]?.hour)} - kl. {formatDanishTime(forecast[period.end]?.hour)}
+                      kl. {formatDanishTime(forecast[period.start]?.timestamp)} - kl. {formatDanishTime(forecast[period.end]?.timestamp)}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {forecast[period.start] ? formatShortDate(forecast[period.start].hour) : "Ukendt"}
+                      {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt"}
                     </p>
                   </div>
                 </div>

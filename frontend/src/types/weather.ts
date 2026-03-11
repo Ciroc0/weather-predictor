@@ -55,7 +55,8 @@ export interface CurrentWeather {
 }
 
 export interface WeatherForecast {
-  hour: string;  // ISO timestamp
+  timestamp: string; // Canonical ISO timestamp
+  hour?: string | number; // Legacy field tolerated during rollout
   leadTimeHours: number;
   dmiTemp: number | null;
   mlTemp: number | null;
@@ -116,6 +117,7 @@ export interface HistoricalTemperaturePoint {
   dmiTemp: number | null;
   mlTemp: number | null;
   actual: number | null;
+  actualTemp?: number | null;
   verified: boolean;
 }
 

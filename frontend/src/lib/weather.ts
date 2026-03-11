@@ -11,37 +11,98 @@ import type {
   WeatherForecast,
 } from "@/types/weather";
 
-export function formatDanishDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("da-DK", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+const COPENHAGEN_TIME_ZONE = "Europe/Copenhagen";
+
+const danishDateFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: COPENHAGEN_TIME_ZONE,
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const danishDateTimeFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: COPENHAGEN_TIME_ZONE,
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const danishTimeFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: COPENHAGEN_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const danishShortDateFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: COPENHAGEN_TIME_ZONE,
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const danishTooltipDateFormatter = new Intl.DateTimeFormat("da-DK", {
+  timeZone: COPENHAGEN_TIME_ZONE,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function parseIsoDate(dateValue: string | null | undefined): Date | null {
+  if (typeof dateValue !== "string" || !dateValue.trim()) {
+    return null;
+  }
+
+  const parsed = new Date(dateValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function formatDanishDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("da-DK", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatWithFormatter(
+  dateValue: string | null | undefined,
+  formatter: Intl.DateTimeFormat,
+  fallback: string,
+): string {
+  const parsed = parseIsoDate(dateValue);
+  return parsed ? formatter.format(parsed) : fallback;
 }
 
-export function formatDanishTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("da-DK", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export function isValidIsoDateString(dateValue: unknown): dateValue is string {
+  return parseIsoDate(typeof dateValue === "string" ? dateValue : null) !== null;
 }
 
-export function formatShortDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("da-DK", {
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export function getForecastTimestamp(row: Pick<WeatherForecast, "timestamp" | "hour">): string | null {
+  if (isValidIsoDateString(row.timestamp)) {
+    return row.timestamp;
+  }
+
+  if (typeof row.hour === "string" && isValidIsoDateString(row.hour)) {
+    return row.hour;
+  }
+
+  return null;
+}
+
+export function formatDanishDate(dateStr: string | null | undefined): string {
+  return formatWithFormatter(dateStr, danishDateFormatter, "Ukendt");
+}
+
+export function formatDanishDateTime(dateStr: string | null | undefined): string {
+  return formatWithFormatter(dateStr, danishDateTimeFormatter, "Ukendt");
+}
+
+export function formatDanishTime(dateStr: string | null | undefined): string {
+  return formatWithFormatter(dateStr, danishTimeFormatter, "Ukendt");
+}
+
+export function formatShortDate(dateStr: string | null | undefined): string {
+  return formatWithFormatter(dateStr, danishShortDateFormatter, "");
+}
+
+export function formatTooltipDateTime(dateStr: string | null | undefined): string {
+  return formatWithFormatter(dateStr, danishTooltipDateFormatter, "Ukendt");
 }
 
 export function getWeatherDescription(code: number | null): string {

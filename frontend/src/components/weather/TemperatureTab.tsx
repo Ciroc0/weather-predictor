@@ -21,7 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDanishTime, formatShortDate, getSourceLabel } from "@/lib/weather";
+import { formatDanishTime, formatShortDate, formatTooltipDateTime, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
   HistoricalTemperaturePoint,
@@ -39,14 +39,13 @@ interface TemperatureTabProps {
 }
 
 interface TemperatureTimelinePoint {
-  time: string;
+  timeKey: string;
   actual: number | null;
   dmiHistory: number | null;
   mlHistory: number | null;
   dmiForecast: number | null;
   mlForecast: number | null;
   apparentForecast: number | null;
-  hour: string | null;
 }
 
 interface TooltipPayloadItem {
@@ -70,24 +69,22 @@ export function TemperatureTab({
 
   const timelineData: TemperatureTimelinePoint[] = [
     ...history.map((point) => ({
-      time: formatShortDate(point.timestamp),
+      timeKey: point.timestamp,
       actual: point.actual,
       dmiHistory: point.dmiTemp,
       mlHistory: point.mlTemp,
       dmiForecast: null,
       mlForecast: null,
       apparentForecast: null,
-      hour: null,
     })),
     ...forecast.map((point) => ({
-      time: formatShortDate(point.hour),
+      timeKey: point.timestamp,
       actual: null,
       dmiHistory: null,
       mlHistory: null,
       dmiForecast: point.dmiTemp,
       mlForecast: hasMlSeries ? point.mlTemp : null,
       apparentForecast: point.apparentTemp,
-      hour: point.hour,
     })),
   ];
 
@@ -99,7 +96,7 @@ export function TemperatureTab({
   const avgDiff =
     differences.length > 0 ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
   const maxDiff = differences.length > 0 ? Math.max(...differences) : null;
-  const forecastBoundaryLabel = forecast[0] ? formatShortDate(forecast[0].hour) : null;
+  const forecastBoundaryTimestamp = forecast[0]?.timestamp ?? null;
 
   const improvement =
     verification.rmseDmi !== null && verification.rmseMl !== null && verification.rmseDmi > 0
@@ -121,7 +118,7 @@ export function TemperatureTab({
 
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <p className="mb-2 font-medium">{label}</p>
+        <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -200,12 +197,18 @@ export function TemperatureTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.actual !== null || d.dmiHistory !== null || d.mlHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
                 <Tooltip content={<CustomTooltip />} />
-                {forecastBoundaryLabel ? (
+                {forecastBoundaryTimestamp ? (
                   <ReferenceLine
-                    x={forecastBoundaryLabel}
+                    x={forecastBoundaryTimestamp}
                     stroke="#475569"
                     strokeWidth={2}
                     label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
@@ -252,7 +255,13 @@ export function TemperatureTab({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter(d => d.dmiForecast !== null || d.mlForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
+                />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
@@ -297,10 +306,10 @@ export function TemperatureTab({
         <h3 className="mb-4 text-lg font-semibold">Næste 16 timer</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {forecast.slice(0, 16).map((hour, index) => (
-            <Card key={hour.hour} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
+            <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
               <CardContent className="p-3 text-center">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.timestamp)}</p>
                   <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}>
                     {getSourceLabel(hour.effectiveTempSource)}
                   </Badge>

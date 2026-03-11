@@ -7,6 +7,7 @@ import { PageState } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { DASHBOARD_QUERY_KEY } from "@/lib/api";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { formatDanishDateTime } from "@/lib/weather";
 import type { DashboardResponse } from "@/types/weather";
 
 export interface DashboardOutletContext {
@@ -63,7 +64,7 @@ export function AppLayout() {
           </p>
           <p>
             {response
-              ? `Snapshot: ${new Date(response.snapshot.generatedAt).toLocaleString("da-DK")}`
+              ? `Snapshot: ${formatDanishDateTime(response.snapshot.generatedAt)}`
               : "Ingen snapshot indlæst"}
           </p>
         </div>

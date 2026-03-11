@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardOutlet } from "@/hooks/useDashboardOutlet";
 import {
+  formatDanishDate,
   formatDanishTime,
   getAlertSummary,
   getForecastPreview,
@@ -69,11 +70,11 @@ export function HomePage() {
           <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {preview.map((hour) => (
               <div
-                key={hour.hour}
+                key={hour.timestamp}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.hour)}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.timestamp)}</p>
                   <Badge variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"} className="text-[9px] px-1 py-0 h-4 min-w-0">
                     {hour.effectiveTempSource === "ml" ? "ML" : "DMI"}
                   </Badge>
@@ -150,7 +151,7 @@ export function HomePage() {
               <p>
                 Seneste modelopdatering:{" "}
                 {snapshot.modelInfo.trainedAt
-                  ? new Date(snapshot.modelInfo.trainedAt).toLocaleDateString("da-DK")
+                  ? formatDanishDate(snapshot.modelInfo.trainedAt)
                   : "Under udvikling"}
               </p>
               <p>Antal vejrobservationer brugt til træning: {snapshot.modelInfo.trainingSamples?.toLocaleString("da-DK") || "Ikke tilgængelig endnu"}</p>
