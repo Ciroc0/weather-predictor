@@ -89,7 +89,7 @@ Systemet består af tre Hugging Face Spaces og to Datasets, der arbejder sammen 
 **Filer:**
 | Fil | Beskrivelse |
 |-----|-------------|
-| `training_matrix.parquet` | Merged forecast + observations med features |
+| `training_matrix.parquet` | Forecasts + actuals + kausale observationsfeatures til træning |
 | `model_registry.json` | Aktiv model registry |
 | `model_meta.json` | Træningsmetadata |
 | `temperature_models.pkl` | Temperatur model bundle |
@@ -112,7 +112,7 @@ Systemet består af tre Hugging Face Spaces og to Datasets, der arbejder sammen 
 ```
 1. dmi-collector henter forecast data fra Open-Meteo
 2. dmi-collector henter observationer fra Open-Meteo Archive
-3. dmi-collector merger data til training_matrix.parquet ➜ dmi-aarhus-weather-data
+3. dmi-collector merger forecasts med actuals og joiner kausal observations-kontekst ved `reference_time` ➜ training_matrix.parquet
 4. dmi-ml-trainer træner modeller fra training_matrix.parquet
 5. dmi-ml-trainer uploader model bundles ➜ dmi-aarhus-weather-data
 6. dmi-collector loader modeller, genererer predictions ➜ dmi-aarhus-predictions
@@ -123,10 +123,10 @@ Systemet består af tre Hugging Face Spaces og to Datasets, der arbejder sammen 
 
 | Space | Scheduler | Interval | Handling |
 |-------|-----------|----------|----------|
-| **dmi-collector** | ✅ Ja | Hver 3. time | `generate_predictions()` - Nye 48-timers predictions |
-| **dmi-collector** | ✅ Ja | Hver time | `verify_predictions()` - Verificer gamle predictions |
-| **dmi-collector** | ✅ Ja | Dagligt 06:00 | `update_daily()` - Daglig dataopdatering |
-| **dmi-ml-trainer** | ✅ Ja | Søndag 06:30 | `auto_retrain()` - Automatisk model retraining |
+| **dmi-collector** | ✅ Ja | 00:35, 03:35, 06:35, 09:35, 12:35, 15:35, 18:35, 21:35 | `generate_predictions()` - Nye 48-timers predictions |
+| **dmi-collector** | ✅ Ja | Hver time :12 | `verify_predictions()` - Verificer gamle predictions |
+| **dmi-collector** | ✅ Ja | Dagligt 05:45 | `update_daily()` - Daglig dataopdatering |
+| **dmi-ml-trainer** | ✅ Ja | Søndag 06:50 | `auto_retrain()` - Automatisk model retraining |
 | **dmi-vs-ml-dashboard** | ❌ Nej | - | On-demand via Gradio UI |
 
 ## Teknisk Stack

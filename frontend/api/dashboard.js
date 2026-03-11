@@ -29,6 +29,32 @@ async function parseParquet(arrayBuffer) {
   return null;
 }
 
+// Fetch the published frontend snapshot from HF
+async function fetchPublishedFrontendSnapshot() {
+  const cacheBuster = Date.now();
+  const url = `https://huggingface.co/datasets/${HF_DATASET_PREDICTIONS}/resolve/main/frontend_snapshot.json?_cb=${cacheBuster}`;
+
+  console.log("[HF API] Fetching frontend snapshot");
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "Cache-Control": "no-cache",
+    },
+  });
+
+  if (!response.ok) {
+    console.log("[HF API] Frontend snapshot not found, falling back to legacy sources");
+    return null;
+  }
+
+  const data = await response.json();
+  console.log(
+    `[HF API] Got frontend snapshot with ${data.history?.temperature?.length || 0} temperature history entries and ${data.forecast?.length || 0} forecast rows`,
+  );
+  return data;
+}
+
 // Fetch history snapshot JSON from HF
 async function fetchHistorySnapshot() {
   // Add cache-buster to avoid HF caching
@@ -91,6 +117,16 @@ export default async function handler(req, res) {
 
   try {
     console.log("[Dashboard] Fetching weather data...");
+
+    const frontendSnapshot = await fetchPublishedFrontendSnapshot();
+    if (frontendSnapshot?.current && frontendSnapshot?.forecast && frontendSnapshot?.history) {
+      return res.status(200).json({
+        snapshot: frontendSnapshot,
+        stale: false,
+        fetchedAt: new Date().toISOString(),
+        source: "frontend-snapshot",
+      });
+    }
     
     // Fetch forecast data, history snapshot, and weather data in parallel
     const [predRows, historySnapshot, weatherRows] = await Promise.all([

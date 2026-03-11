@@ -179,41 +179,41 @@ Primary historical training dataset and model artifact repository.
 
 Current files:
 
-- `data.parquet`
-- `xgb_model.pkl`
+- `training_matrix.parquet`
+- `model_registry.json`
 - `model_meta.json`
+- `temperature_models.pkl`
+- `wind_speed_models.pkl`
+- `wind_gust_models.pkl`
+- `rain_event_models.pkl`
+- `rain_amount_models.pkl`
 
 Role:
 
-- Stores merged forecast vs actual historical weather rows for Aarhus.
-- Stores the deployed model and model metadata used by both collector and dashboard.
+- Stores forecast rows, actual observations, and causal observation-context features for Aarhus.
+- Stores the active multi-target model bundles and training metadata used by collector and frontend snapshots.
 
-Likely logical schema from producer code:
+Logical schema highlights from producer code:
 
-- `timestamp`
+- `target_timestamp`
 - `reference_time`
 - `lead_time_hours`
-- `dmi_temp_pred`
-- `dmi_wind_pred`
-- `dmi_pressure_pred`
-- `dmi_humidity_pred`
-- `actual_temp`
-- `actual_wind`
-- `actual_pressure`
-- `actual_humidity`
-- `hour`
-- `day_of_year`
-- `month`
-- `hour_sin`
-- `hour_cos`
-- `month_sin`
-- `month_cos`
-- `dmi_error`
+- `lead_bucket`
+- `dmi_*_pred`
+- `actual_*`
+- `forecast_wind_u`
+- `forecast_wind_v`
+- `dmi_*_pred_run_delta`
+- `observation_context_timestamp`
+- `obs_*`
+- `temp_correction_target`
+- `wind_speed_correction_target`
+- `wind_gust_correction_target`
 
 Operational note:
 
 - This dataset is the system of record for training and recent offline evaluation.
-- The `xgb_model.pkl` in this repo is the deployed model artifact.
+- Raw `actual_*` columns are kept for labels/debugging, while `obs_*` columns are the causal observation-derived model features.
 
 ### `hf/datasets/dmi-aarhus-predictions`
 
@@ -253,11 +253,11 @@ Operational note:
 Normal operating flow:
 
 1. `dmi-collector` fetches forecast data and actual weather observations from Open-Meteo.
-2. `dmi-collector` merges them into historical training rows and uploads `data.parquet` to `dmi-aarhus-weather-data`.
-3. `dmi-ml-trainer` trains a correction model from `data.parquet`.
-4. `dmi-ml-trainer` uploads `xgb_model.pkl` and `model_meta.json` to `dmi-aarhus-weather-data`.
-5. `dmi-collector` loads `xgb_model.pkl`, generates future `ml_pred` values, and uploads `predictions.parquet` to `dmi-aarhus-predictions`.
-6. `dmi-vs-ml-dashboard` reads both datasets and visualizes future forecasts and recent realized accuracy.
+2. `dmi-collector` merges forecasts with actuals, attaches observation context causally at `reference_time`, and uploads `training_matrix.parquet` to `dmi-aarhus-weather-data`.
+3. `dmi-ml-trainer` trains bucketed temperature, wind, and rain models from `training_matrix.parquet`.
+4. `dmi-ml-trainer` uploads model bundles, `model_registry.json`, and `model_meta.json` to `dmi-aarhus-weather-data`.
+5. `dmi-collector` loads the active bundles, attaches the same observation context to future forecasts, and uploads `predictions_latest.parquet` plus `frontend_snapshot.json` to `dmi-aarhus-predictions`.
+6. `dmi-vs-ml-dashboard` and the Vercel frontend read the datasets and visualize future forecasts plus recent backtest/verification history.
 
 ## Key Design Choices
 
@@ -300,10 +300,10 @@ Scheduler opsummering (fra koden):
 
 | Space | Scheduler | Interval | Handling |
 |-------|-----------|----------|----------|
-| dmi-collector | ✅ Ja | Hver 3. time | `generate_predictions()` - Nye 48-timers predictions |
-| dmi-collector | ✅ Ja | Hver time | `verify_predictions()` - Verificer gamle predictions |
-| dmi-collector | ✅ Ja | Dagligt 06:00 | `update_daily()` - Daglig dataopdatering |
-| dmi-ml-trainer | ✅ Ja | Søndag 06:30 | `auto_retrain()` - Automatisk model retraining |
+| dmi-collector | ✅ Ja | 00:35, 03:35, 06:35, 09:35, 12:35, 15:35, 18:35, 21:35 | `generate_predictions()` - Nye 48-timers predictions |
+| dmi-collector | ✅ Ja | Hver time :12 | `verify_predictions()` - Verificer gamle predictions |
+| dmi-collector | ✅ Ja | Dagligt 05:45 | `update_daily()` - Daglig dataopdatering |
+| dmi-ml-trainer | ✅ Ja | Søndag 06:50 | `auto_retrain()` - Automatisk model retraining |
 | dmi-vs-ml-dashboard | ❌ Nej | - | On-demand via Gradio UI (5 min cache)
 
 Important limitation:
