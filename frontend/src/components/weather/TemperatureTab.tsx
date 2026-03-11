@@ -64,6 +64,10 @@ export function TemperatureTab({
 }: TemperatureTabProps) {
   const hasMlSeries = targetStatus.hasActiveModel && forecast.some((point) => point.mlTemp !== null);
   const hasHistory = history.length > 0;
+  // Debug: Log om der er actual data
+  console.log("TemperatureTab history:", history.length, "points");
+  console.log("Actual temps:", history.map(h => h.actualTemp));
+  console.log("hasHistory:", hasHistory);
   // Always show all data series
   const showDmi = true;
   const showMl = hasMlSeries;
