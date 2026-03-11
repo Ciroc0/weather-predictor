@@ -64,12 +64,6 @@ export function RainTab({
   const currentRain = forecast[0];
   const hasHistory = history.length > 0;
 
-  // Debug: Log alle keys i første history objekt
-  if (history.length > 0) {
-    console.log("RainTab first history keys:", Object.keys(history[0]));
-    console.log("RainTab first history:", history[0]);
-  }
-
   const timelineData: RainTimelinePoint[] = [
     ...history.map((point) => ({
       time: formatShortDate(point.timestamp),
@@ -230,9 +224,9 @@ export function RainTab({
               Regnrisiko backtest - Sidste 7 dage
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -253,10 +247,10 @@ export function RainTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Bar dataKey="actualProb" name="Faktisk regn" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="actualProb" name="Faktisk regn" fill="#0B2EF4" radius={[3, 3, 0, 0]} />
                 ) : null}
-                <Line type="monotone" dataKey="dmiProbHistory" name="DMI Backtest" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="mlProbHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="dmiProbHistory" name="DMI Backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                <Line type="monotone" dataKey="mlProbHistory" name="ML Backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -272,8 +266,8 @@ export function RainTab({
               Regnrisiko forecast - Næste 48 timer
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-blue-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
             </div>
           </div>
         </CardHeader>
@@ -292,21 +286,26 @@ export function RainTab({
                   type="monotone"
                   dataKey="dmiProbForecast"
                   name="DMI Forecast"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
+                  stroke="#27D6F5"
+                  strokeWidth={3}
                   dot={false}
+                  strokeOpacity={0.9}
                 />
                 <Line
                   type="monotone"
                   dataKey="mlProbForecast"
                   name="ML Forecast"
-                  stroke="#10b981"
-                  strokeWidth={2}
+                  stroke="#F54927"
+                  strokeWidth={3}
                   dot={false}
+                  strokeOpacity={0.9}
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Sammenligning af DMI's regnrisiko, ML-model og faktisk registreret regn de sidste 7 dage.
+          </p>
         </CardContent>
       </Card>
 
@@ -319,9 +318,9 @@ export function RainTab({
               Regnmængde backtest - Sidste 7 dage
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-sky-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-400"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -332,7 +331,7 @@ export function RainTab({
               <ComposedChart data={timelineData.filter(d => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                 <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryLabel ? (
                   <ReferenceLine
@@ -343,10 +342,10 @@ export function RainTab({
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Bar dataKey="actualAmount" name="Faktisk regnmængde" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="actualAmount" name="Faktisk regnmængde" fill="#0B2EF4" radius={[3, 3, 0, 0]} />
                 ) : null}
-                <Line type="monotone" dataKey="dmiAmountHistory" name="DMI Backtest" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="mlAmountHistory" name="ML Backtest" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="dmiAmountHistory" name="DMI Backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                <Line type="monotone" dataKey="mlAmountHistory" name="ML Backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -362,8 +361,8 @@ export function RainTab({
               Regnmængde forecast - Næste 48 timer
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-sky-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
             </div>
           </div>
         </CardHeader>
@@ -376,23 +375,25 @@ export function RainTab({
               <ComposedChart data={timelineData.filter(d => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                 <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={3} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="dmiAmountForecast"
                   name="DMI Forecast"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
+                  stroke="#27D6F5"
+                  strokeWidth={3}
                   dot={false}
+                  strokeOpacity={0.9}
                 />
                 <Line
                   type="monotone"
                   dataKey="mlAmountForecast"
                   name="ML Forecast"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
+                  stroke="#F54927"
+                  strokeWidth={3}
                   dot={false}
+                  strokeOpacity={0.9}
                 />
               </ComposedChart>
             </ResponsiveContainer>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Award,
@@ -209,27 +209,6 @@ export function PerformanceTab({
 }: PerformanceTabProps) {
   const [section, setSection] = useState<PerformanceSection>("temperature");
 
-  // Debug: Log history data
-  useEffect(() => {
-    console.log("PerformanceTab history:", {
-      temperature: history.temperature.length,
-      wind: history.wind.length,
-      rain: history.rain.length,
-    });
-    if (history.temperature.length > 0) {
-      console.log("First temp history keys:", Object.keys(history.temperature[0]));
-      console.log("First temp history:", history.temperature[0]);
-    }
-    if (history.wind.length > 0) {
-      console.log("First wind history keys:", Object.keys(history.wind[0]));
-      console.log("First wind history:", history.wind[0]);
-    }
-    if (history.rain.length > 0) {
-      console.log("First rain history keys:", Object.keys(history.rain[0]));
-      console.log("First rain history:", history.rain[0]);
-    }
-  }, [history]);
-
   const improvement =
     verification.rmseDmi !== null && verification.rmseMl !== null && verification.rmseDmi > 0
       ? ((verification.rmseDmi - verification.rmseMl) / verification.rmseDmi) * 100
@@ -407,9 +386,9 @@ export function PerformanceTab({
                     <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip content={<HistoryTooltip suffix="°C" />} />
-                    <Line type="monotone" dataKey="dmi" name="DMI-prognose" stroke="#64748b" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="ml" name="ML-prognose" stroke="#10b981" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="actual" name="Faktisk vejr" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                    <Line type="monotone" dataKey="dmi" name="DMI-prognose" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                    <Line type="monotone" dataKey="ml" name="ML-prognose" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                    <Line type="monotone" dataKey="actual" name="Faktisk vejr" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -435,9 +414,9 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI vind" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML vind" stroke="#10b981" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vind" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI vind" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="ml" name="ML vind" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk vind" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -455,9 +434,9 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI vindstød" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML vindstød" stroke="#ef4444" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI vindstød" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="ml" name="ML vindstød" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -484,9 +463,9 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
                       <Tooltip content={<HistoryTooltip suffix="%" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI regnrisiko" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML regnrisiko" stroke="#10b981" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regn" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI regnrisiko" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="ml" name="ML regnrisiko" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk regn" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -504,9 +483,9 @@ export function PerformanceTab({
                       <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip content={<HistoryTooltip suffix=" mm" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI regnmængde" stroke="#64748b" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="ml" name="ML regnmængde" stroke="#0ea5e9" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="dmi" name="DMI regnmængde" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="ml" name="ML regnmængde" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -537,106 +516,66 @@ export function PerformanceTab({
                   <AreaChart data={errorData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
                     <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                     <Tooltip content={<ErrorTooltip suffix="°C" />} />
                     <Area 
                       type="monotone" 
                       dataKey="dmiError" 
                       name="DMI fejl" 
-                      stroke="#64748b" 
-                      fill="#64748b"
+                      stroke="#27D6F5" 
+                      fill="#27D6F5"
                       fillOpacity={0.3}
-                      strokeWidth={2} 
-                      dot={false} 
+                      strokeWidth={2}
+                      dot={false}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="mlError" 
                       name="ML fejl" 
-                      stroke="#10b981" 
-                      fill="#10b981"
+                      stroke="#F54927" 
+                      fill="#F54927"
                       fillOpacity={0.3}
-                      strokeWidth={2} 
-                      dot={false} 
+                      strokeWidth={2}
+                      dot={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
-            )
-          ) : null}
-
-          {section === "wind" ? (
-            hasErrorData || hasGustErrorData ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="h-[280px] w-full">
-                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vindhastighed fejl</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={errorData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="dmiError" 
-                        name="DMI fejl" 
-                        stroke="#64748b" 
-                        fill="#64748b"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="mlError" 
-                        name="ML fejl" 
-                        stroke="#10b981" 
-                        fill="#10b981"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-[280px] w-full">
-                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vindstød fejl</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={gustErrorData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="dmiError" 
-                        name="DMI fejl" 
-                        stroke="#64748b" 
-                        fill="#64748b"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="mlError" 
-                        name="ML fejl" 
-                        stroke="#ef4444" 
-                        fill="#ef4444"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+              <div className="h-[280px] w-full">
+                <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vind fejl (m/s)</p>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={errorData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} tickMargin={8} interval={5} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
+                    <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="dmiError" 
+                      name="DMI fejl" 
+                      stroke="#27D6F5" 
+                      fill="#27D6F5"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="mlError" 
+                      name="ML fejl" 
+                      stroke="#F54927" 
+                      fill="#F54927"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            ) : (
-              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
-            )
-          ) : null}
+            </>
+          ) : (
+            <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
+          )
 
           {section === "rain" ? (
             hasRainProbErrorData || hasErrorData ? (
@@ -684,21 +623,21 @@ export function PerformanceTab({
                         type="monotone" 
                         dataKey="dmiError" 
                         name="DMI fejl" 
-                        stroke="#64748b" 
-                        fill="#64748b"
+                        stroke="#27D6F5" 
+                        fill="#27D6F5"
                         fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
+                        strokeWidth={2}
+                        dot={false}
                       />
                       <Area 
                         type="monotone" 
                         dataKey="mlError" 
                         name="ML fejl" 
-                        stroke="#0ea5e9" 
-                        fill="#0ea5e9"
+                        stroke="#F54927" 
+                        fill="#F54927"
                         fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
+                        strokeWidth={2}
+                        dot={false}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -727,8 +666,8 @@ export function PerformanceTab({
                 <XAxis type="number" tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="bucket" tick={{ fontSize: 12 }} width={160} />
                 <Tooltip content={<HistoryTooltip />} />
-                <Bar dataKey="dmi" name="DMI-prognose" fill="#64748b" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="ml" name="ML-prognose" fill="#10b981" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="dmi" name="DMI-prognose" fill="#27D6F5" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="ml" name="ML-prognose" fill="#F54927" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

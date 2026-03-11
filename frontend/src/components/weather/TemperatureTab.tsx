@@ -189,9 +189,9 @@ export function TemperatureTab({
               Temperatur backtest - Sidste 7 dage
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-violet-500"></span> Faktisk</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -212,17 +212,20 @@ export function TemperatureTab({
                   />
                 ) : null}
                 {showDmi ? (
-                  <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#ef4444" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="dmiHistory" name="DMI Backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                 ) : null}
                 {showMl && hasMlSeries ? (
-                  <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="mlHistory" name="ML Backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                 ) : null}
                 {hasHistory ? (
-                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#8b5cf6" strokeWidth={4} dot={false} />
+                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
                 ) : null}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Sammenligning af DMI's prognose, ML-model og faktisk målt temperatur de sidste 7 dage.
+          </p>
         </CardContent>
       </Card>
 
@@ -235,8 +238,8 @@ export function TemperatureTab({
               Temperatur forecast - Næste 48 timer
             </CardTitle>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-red-500"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-emerald-500"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
               <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500"></span> Føles som</span>
             </div>
           </div>
@@ -257,9 +260,10 @@ export function TemperatureTab({
                     type="monotone"
                     dataKey="dmiForecast"
                     name="DMI Forecast"
-                    stroke="#ef4444"
-                    strokeWidth={2}
+                    stroke="#27D6F5"
+                    strokeWidth={3}
                     dot={false}
+                    strokeOpacity={0.9}
                   />
                 ) : null}
                 {showMl && hasMlSeries ? (
@@ -267,9 +271,10 @@ export function TemperatureTab({
                     type="monotone"
                     dataKey="mlForecast"
                     name="ML Forecast"
-                    stroke="#10b981"
-                    strokeWidth={2}
+                    stroke="#F54927"
+                    strokeWidth={3}
                     dot={false}
+                    strokeOpacity={0.9}
                   />
                 ) : null}
                 <Line
@@ -277,9 +282,10 @@ export function TemperatureTab({
                   dataKey="apparentForecast"
                   name="Føles som"
                   stroke="#f59e0b"
-                  strokeWidth={2}
+                  strokeWidth={3}
                   strokeDasharray="5 5"
                   dot={false}
+                  strokeOpacity={0.9}
                 />
               </ComposedChart>
             </ResponsiveContainer>
