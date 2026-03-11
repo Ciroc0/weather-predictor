@@ -177,16 +177,6 @@ function calculateErrors(
     }));
 }
 
-function calculateGustErrors(history: DashboardHistory): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
-  return history.wind
-    .filter((p) => p.actualWindGust !== null)
-    .map((p) => ({
-      time: formatShortDate(p.timestamp),
-      dmiError: p.dmiWindGust !== null ? Math.abs(p.dmiWindGust - (p.actualWindGust ?? 0)) : null,
-      mlError: p.mlWindGust !== null ? Math.abs(p.mlWindGust - (p.actualWindGust ?? 0)) : null,
-    }));
-}
-
 function calculateRainProbErrors(history: DashboardHistory): Array<{ time: string; dmiError: number | null; mlError: number | null }> {
   return history.rain
     .filter((p) => p.actualRainEvent !== null)
@@ -241,11 +231,9 @@ export function PerformanceTab({
 
   // Calculate errors for current section
   const errorData = useMemo(() => calculateErrors(history, section), [history, section]);
-  const gustErrorData = useMemo(() => calculateGustErrors(history), [history]);
   const rainProbErrorData = useMemo(() => calculateRainProbErrors(history), [history]);
 
   const hasErrorData = errorData.some((d) => d.dmiError !== null || d.mlError !== null);
-  const hasGustErrorData = gustErrorData.some((d) => d.dmiError !== null || d.mlError !== null);
   const hasRainProbErrorData = rainProbErrorData.some((d) => d.dmiError !== null || d.mlError !== null);
 
   return (
@@ -372,7 +360,7 @@ export function PerformanceTab({
         <CardContent className="space-y-6">
           {section === "temperature" ? (
             history.temperature.length > 0 ? (
-              <div className="h-[320px] w-full">
+                <div className="h-[320px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={history.temperature.map((point) => ({
@@ -511,6 +499,7 @@ export function PerformanceTab({
         <CardContent className="space-y-6">
           {section === "temperature" ? (
             hasErrorData ? (
+              <>
               <div className="h-[320px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={errorData}>
@@ -572,10 +561,11 @@ export function PerformanceTab({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </>
-          ) : (
+              </>
+            ) : (
             <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
           )
+          ) : null}
 
           {section === "rain" ? (
             hasRainProbErrorData || hasErrorData ? (
