@@ -111,11 +111,11 @@ export function getWeatherDescription(code: number | null): string {
     1: "Mest klart",
     2: "Delvist skyet",
     3: "Overskyet",
-    45: "Taage",
-    48: "Rimtaage",
-    51: "Let stoevregn",
-    53: "Moderat stoevregn",
-    55: "Kraftig stoevregn",
+    45: "Tåge",
+    48: "Rimtåge",
+    51: "Let støvregn",
+    53: "Moderat støvregn",
+    55: "Kraftig støvregn",
     61: "Let regn",
     63: "Moderat regn",
     65: "Kraftig regn",
@@ -174,7 +174,7 @@ export function getForecastPreview(forecast: WeatherForecast[], count = 12): Wea
 
 export function getTemperatureImprovementText(verification: VerificationMetrics): string {
   if (verification.rmseDmi === null || verification.rmseMl === null || verification.rmseDmi <= 0) {
-    return "ML-modellen sammenlignes loebende med DMI.";
+    return "ML-modellen sammenlignes løbende med DMI.";
   }
   const improvement = ((verification.rmseDmi - verification.rmseMl) / verification.rmseDmi) * 100;
   return improvement > 0

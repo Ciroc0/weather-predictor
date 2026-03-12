@@ -1,183 +1,146 @@
 # System Context
 
-This file is an internal working note for the local `weather-predictor` workspace. It describes how the current Hugging Face Spaces and Datasets fit together, what each repo is responsible for, and which implementation details matter when making changes.
+Dette dokument beskriver den faktiske struktur i workspace'et pr. nu og skal læses som intern source of truth for arkitektur og drift.
 
-## Workspace Layout
-
-The parent repository is a local coordination repo. The actual deployable applications and data live in nested git repos under `hf/`.
+## Workspace layout
 
 ```text
 weather-predictor/
+  README.md
+  NOTICE
+  docs/
+  scripts/
+  frontend/
   hf/
     spaces/
-      dmi-collector
-      dmi-vs-ml-dashboard
-      dmi-ml-trainer
+      dmi-collector/
+      dmi-ml-trainer/
+      dmi-vs-ml-dashboard/
     datasets/
-      dmi-aarhus-predictions
-      dmi-aarhus-weather-data
+      dmi-aarhus-weather-data/
+      dmi-aarhus-predictions/
 ```
 
-Parent repo purpose:
+Vigtig nuance:
 
-- Holds local setup scripts and shared working context.
-- Ignores `hf/` via `.gitignore`, so the nested Hugging Face repos keep their own git history and push targets.
-- Is not the deployment unit. Each nested repo must be committed and pushed independently.
+- `frontend/` er en del af root-repoet og kan deployes herfra
+- alle mapper under `hf/` er selvstændige git-repos
+- root-repoet er derfor både koordineringsrepo og hjemsted for frontenden, men ikke deployment-enhed for Hugging Face Spaces
 
-## Repos And Roles
+## Repos og ansvar
+
+### `frontend/`
+
+Public webapp bygget med Vite, React 19 og TypeScript.
+
+Ansvar:
+
+- kalder `/api/dashboard`
+- viser forecast, historisk backtest, verification og modelstatus
+- bruger `frontend_snapshot.json` som primær datakontrakt
+- falder tilbage til Hugging Face dataset-server JSON, hvis snapshot mangler
+
+Teknisk note:
+
+- `frontend/api/dashboard.js` er Vercel-funktionen
+- `frontend/src/lib/seo.ts` peger aktuelt på produktets public site-URL
+- `frontend/public/robots.txt` og `frontend/public/sitemap.xml` er aktive SEO-artefakter
 
 ### `hf/spaces/dmi-collector`
 
-Primary ingestion and prediction generation app.
+Operational hub for data ingestion og live predictions.
 
-Responsibilities:
+Ansvar:
 
-- Fetches DMI HARMONIE forecast-like data for Aarhus through Open-Meteo.
-- Fetches historical actual weather observations from Open-Meteo archive.
-- Builds the training dataset and uploads it to `Ciroc0/dmi-aarhus-weather-data`.
-- Loads the current ML model from `Ciroc0/dmi-aarhus-weather-data`.
-- Generates future predictions and uploads them to `Ciroc0/dmi-aarhus-predictions`.
-- Exposes manual actions through a Gradio UI.
+- henter forecast-runs fra Open-Meteo for Aarhus
+- henter observationer fra Open-Meteo Archive
+- bygger `training_matrix.parquet`
+- loader aktive modelbundles fra weather-datasættet
+- genererer live predictions til predictions-datasættet
+- verificerer gamle predictions mod actuals
+- bygger og uploader `frontend_snapshot.json`
 
-Core implementation:
+Faktisk scheduler fra koden:
 
-- `app.py` uses `timestamp` as the primary key and explicitly drops duplicates on `timestamp`, not on `reference_time`.
-- Historical backfill starts at `2025-11-01`.
-- Daily update window is the last 7 days.
-- Future prediction window is up to 48 hours ahead.
-- Features for inference are generated from DMI forecast fields plus cyclical time features.
+- predictions: `00:35`, `03:35`, `06:35`, `09:35`, `12:35`, `15:35`, `18:35`, `21:35`
+- verification: hver time `:12`
+- daily update: `05:45`
 
-Important code paths:
+Startup-adfærd:
 
-- Forecast ingestion: `fetch_forecasts_for_period()`
-- Actuals ingestion: `fetch_actuals_for_period()`
-- Future forecasts: `fetch_future_forecasts()`
-- Training data build: `backfill_historical_data()` and `update_daily()`
-- Live predictions dataset write: `update_predictions()`
-- Prediction verification exists as `verify_past_predictions()`, but it is currently not wired into the scheduler or UI.
-- Frontend snapshots are rebuilt from the predictions dataset and now recompute missing future ML columns before publishing.
+- efter ca. 20 sekunder kører en catch-up-tråd
+- hvis træningsdata mangler eller er for gamle, kører `update_daily()`
+- hvis future predictions mangler, kører `generate_predictions()`
+- hvis uverificerede historiske predictions er forfaldne, kører `verify_predictions()`
 
-Scheduler behavior (fra `app.py` linje 2108-2121):
+Output:
 
-| Interval | Handling | Beskrivelse |
-|----------|----------|-------------|
-| Hver 3. time | `generate_predictions()` | Genererer nye 48-timers ML-forudsigelser |
-| Hver time | `verify_predictions()` | Verificerer gamle predictions mod faktiske observationer |
-| Dagligt kl. 06:00 | `update_daily()` | Henter forecast og observationsdata for de sidste 7 dage |
+- `training_matrix.parquet` til `dmi-aarhus-weather-data`
+- `predictions_latest.parquet` til `dmi-aarhus-predictions`
+- `frontend_snapshot.json` til `dmi-aarhus-predictions`
 
-Startup catch-up:
-- En background thread kører ved startup og tjekker om data mangler
-- Hvis der mangler data, køres update_daily(), generate_predictions() og verify_predictions() automatisk
-- Dette sikrer at systemet kommer op og køre efter en restart
+Kompatibilitet:
 
-Observed implications:
-
-- The collector is the operational hub. If this Space is broken, both datasets stop evolving.
-- Prediction verification kører automatisk hver time og ved startup hvis nødvendigt.
+- loader både `training_matrix.parquet` og legacy `data.parquet`
+- loader både `predictions_latest.parquet` og legacy `predictions.parquet`
 
 ### `hf/spaces/dmi-ml-trainer`
 
-Model training and deployment app.
+Multi-target modeltræner.
 
-Responsibilities:
+Ansvar:
 
-- Loads `Ciroc0/dmi-aarhus-weather-data`.
-- Trains an `XGBRegressor` to predict `dmi_error = actual_temp - dmi_temp_pred`.
-- Uploads `xgb_model.pkl` and `model_meta.json` back into the weather dataset repo.
+- læser `training_matrix.parquet`
+- træner bucketed modeller for fem targets
+- uploader modelbundles, `model_registry.json` og `model_meta.json`
+- viser aktiv registry og træningsstatus i Gradio
 
-Training logic:
+Faktisk scheduler fra koden:
 
-- Drops duplicate rows by `timestamp`.
-- Sorts chronologically by `timestamp`.
-- Uses a rolling holdout rule:
-  rows newer than `now - 7 days` are excluded from training.
-- Requires at least 100 rows total and at least 50 usable training rows after cleaning.
+- søndag `06:50`
 
-Feature set:
+Targets:
 
-- `dmi_temp_pred`
-- `dmi_wind_pred`
-- `dmi_pressure_pred`
-- `dmi_humidity_pred`
-- `hour_sin`
-- `hour_cos`
-- `month_sin`
-- `month_cos`
-- `hour`
-- `day_of_year`
+- `temperature`
+- `wind_speed`
+- `wind_gust`
+- `rain_event`
+- `rain_amount`
 
-Model output:
+Modelstrategi:
 
-- The model predicts a correction term, not temperature directly.
-- Downstream ML temperature is computed as:
-  `ml_pred = dmi_temp_pred + predicted_correction`
-
-Scheduler behavior (fra `app.py` linje 669-678):
-
-| Interval | Handling | Beskrivelse |
-|----------|----------|-------------|
-| Søndag kl. 06:30 | `auto_retrain()` | Automatisk retraining af alle target-modeller |
-
-Manuel træning er tilgængelig via Gradio UI knappen "Train and Deploy All Aarhus Models".
-
-Training targets (5 targets × 4 lead buckets = op til 20 modeller):
-- `temperature`: XGBRegressor korrektionsmodel
-- `wind_speed`: XGBRegressor korrektionsmodel
-- `wind_gust`: XGBRegressor korrektionsmodel
-- `rain_event`: XGBClassifier klassifikationsmodel
-- `rain_amount`: XGBRegressor regression (kun våde timer)
-
-Model promotion:
-- Kun modeller der slår baseline (rå DMI forecast) på validation bliver promoted
-- Ellers beholdes eksisterende model for den pågældende target/bucket
+- correction-modeller for temperatur, vindhastighed og vindstød
+- klassifikation for regnhændelse
+- regressionsmodel for regnmængde
+- promotion sker kun bucket-for-bucket, hvis ML slår baseline
 
 ### `hf/spaces/dmi-vs-ml-dashboard`
 
-Read-only presentation and evaluation app.
+Read-only Gradio-dashboard.
 
-Responsibilities:
+Ansvar:
 
-- Loads future and verified predictions from `Ciroc0/dmi-aarhus-predictions`.
-- Loads the training dataset and model from `Ciroc0/dmi-aarhus-weather-data`.
-- Displays two main views:
-  live future forecast comparison and recent evaluation.
+- loader predictions og træningsdata
+- rekonstruerer backtest for de seneste 7 dage
+- visualiserer temperatur, vind, regn og performance
 
-UI structure:
+Drift:
 
-- `I morgen (Live)` tab:
-  shows next 48 hours of DMI vs ML forecasts and any verified past predictions.
-- `Evaluering (Sidste 7 dage)` tab:
-  recomputes model outputs on recent actual historical data and compares DMI vs ML.
+- ingen scheduler
+- cache TTL `300` sekunder
+- future-vindue `48` timer
+- historisk evalueringsvindue `7` dage
 
-Evaluation logic:
+Kompatibilitet:
 
-- Uses the same 7-day cutoff pattern as the trainer, but in reverse:
-  rows from the most recent 7 days are evaluated.
-- Recreates ML predictions locally by loading `xgb_model.pkl`.
-- Computes RMSE, MAE, and win percentage.
-
-Scheduler behavior:
-
-- Ingen automatisk scheduler
-- Data hentes on-demand via Gradio `load()`
-- Cache TTL: 5 minutter (300 sekunder)
-- Manuel refresh tilgængelig via "Refresh All" knappen
-
-Datakilder ved hver load:
-1. `training_matrix.parquet` fra dmi-aarhus-weather-data (historiske data)
-2. `predictions_latest.parquet` fra dmi-aarhus-predictions (live predictions)
-3. Model bundles (*.pkl) fra dmi-aarhus-weather-data
-
-Observed implications:
-
-- The dashboard is stateless and derives everything from the two datasets plus the model file.
-- If the predictions dataset is stale, the live tab is stale even if the dashboard app itself is healthy.
+- predictions loader først `predictions_latest.parquet`, derefter `predictions.parquet`
+- training loader først `training_matrix.parquet`, derefter `data.parquet`
 
 ### `hf/datasets/dmi-aarhus-weather-data`
 
-Primary historical training dataset and model artifact repository.
+System of record for træningsdata og aktive modelbundles.
 
-Current files:
+Aktive filer:
 
 - `training_matrix.parquet`
 - `model_registry.json`
@@ -188,199 +151,75 @@ Current files:
 - `rain_event_models.pkl`
 - `rain_amount_models.pkl`
 
-Role:
+Legacy/kompatibilitetsfiler:
 
-- Stores forecast rows, actual observations, and causal observation-context features for Aarhus.
-- Stores the active multi-target model bundles and training metadata used by collector and frontend snapshots.
+- `data.parquet`
+- `xgb_model.pkl`
 
-Logical schema highlights from producer code:
+Bemærkning:
 
-- `target_timestamp`
-- `reference_time`
-- `lead_time_hours`
-- `lead_bucket`
-- `dmi_*_pred`
-- `actual_*`
-- `forecast_wind_u`
-- `forecast_wind_v`
-- `dmi_*_pred_run_delta`
-- `observation_context_timestamp`
-- `obs_*`
-- `temp_correction_target`
-- `wind_speed_correction_target`
-- `wind_gust_correction_target`
-
-Operational note:
-
-- This dataset is the system of record for training and recent offline evaluation.
-- Raw `actual_*` columns are kept for labels/debugging, while `obs_*` columns are the causal observation-derived model features.
+- `xgb_model.pkl` er et ældre single-target artefakt og bruges ikke af den nuværende multi-target promotion-pipeline
 
 ### `hf/datasets/dmi-aarhus-predictions`
 
-Live prediction store.
+System of record for live predictions og frontendkontrakt.
 
-Current files:
+Aktive filer:
+
+- `predictions_latest.parquet`
+- `frontend_snapshot.json`
+
+Legacy/kompatibilitetsfiler:
 
 - `predictions.parquet`
+- `history_snapshot.json`
 
-Role:
+Bemærkning:
 
-- Stores future predictions generated by the collector.
-- Stores later verification results when predictions can be matched with actuals.
+- `history_snapshot.json` læses kun af frontendens legacy fallback-kode; den primære kontrakt er `frontend_snapshot.json`
 
-Likely logical schema from producer code:
+## End-to-end flow
 
-- `timestamp`
-- `reference_time`
-- `lead_time_hours`
-- `dmi_temp_pred`
-- `dmi_wind_pred`
-- `dmi_pressure_pred`
-- `dmi_humidity_pred`
-- `ml_pred`
-- `prediction_made_at`
-- `city`
-- `verified`
-- `actual_temp`
+1. `dmi-collector` henter forecast og observationer via Open-Meteo.
+2. `dmi-collector` bygger træningsmatrix og uploader den til `dmi-aarhus-weather-data`.
+3. `dmi-ml-trainer` træner bucketed modeller og uploader aktive bundles og registry.
+4. `dmi-collector` loader aktive bundles og genererer nye predictions.
+5. `dmi-collector` verificerer historiske predictions, når actuals foreligger.
+6. `dmi-collector` publicerer `frontend_snapshot.json`.
+7. `frontend/` og `dmi-vs-ml-dashboard` læser datasættet og visualiserer resultaterne.
 
-Operational note:
+## Nøgledesignvalg
 
-- The collector replaces any existing row with the same `timestamp` before appending new predictions.
-- `verified` rows are what power the dashboard's realized performance comparison.
+### `target_timestamp` er den vigtige forecast-identitet
 
-## End-To-End Data Flow
+Den nuværende kode normaliserer omkring forecastets målte tidspunkt, ikke kun forecast-run tidspunktet.
 
-Normal operating flow:
+Hvorfor det betyder noget:
 
-1. `dmi-collector` fetches forecast data and actual weather observations from Open-Meteo.
-2. `dmi-collector` merges forecasts with actuals, attaches observation context causally at `reference_time`, and uploads `training_matrix.parquet` to `dmi-aarhus-weather-data`.
-3. `dmi-ml-trainer` trains bucketed temperature, wind, and rain models from `training_matrix.parquet`.
-4. `dmi-ml-trainer` uploads model bundles, `model_registry.json`, and `model_meta.json` to `dmi-aarhus-weather-data`.
-5. `dmi-collector` loads the active bundles, attaches the same observation context to future forecasts, and uploads `predictions_latest.parquet` plus `frontend_snapshot.json` to `dmi-aarhus-predictions`.
-6. `dmi-vs-ml-dashboard` and the Vercel frontend read the datasets and visualize future forecasts plus recent backtest/verification history.
+- mange rækker deler samme `reference_time`
+- flere valid forecast-points må derfor ikke kollapses blot fordi de kom fra samme run
 
-## Key Design Choices
+### Timezone er `Europe/Copenhagen`
 
-### `timestamp` is the primary key
+Alle apps normaliserer timestamps til `Europe/Copenhagen`.
 
-This is the most important design rule in the current codebase.
+Hvorfor det betyder noget:
 
-- All three Spaces treat `timestamp` as the target weather time.
-- Duplicate removal consistently uses `timestamp`.
-- Earlier behavior appears to have been more tied to `reference_time`, but the current implementation has been corrected toward `timestamp`.
+- scheduler-tider skal læses som København-tid
+- UI, snapshot og verification er bygget til danske brugere
 
-Why it matters:
+### Frontend-snapshot er den primære public kontrakt
 
-- `reference_time` is the forecast run time.
-- Many forecasted rows share the same `reference_time`.
-- Using `reference_time` as uniqueness key would collapse valid forecast horizons incorrectly.
+`frontend_snapshot.json` er den vigtigste integration mellem collector og public webapp.
 
-### Timezone standardization is centered on Copenhagen time
+Hvorfor det betyder noget:
 
-All apps explicitly normalize time to `Europe/Copenhagen`.
+- frontend-fallbacks findes stadig, men de er sekundære
+- ændringer i snapshot-schema skal koordineres med både `frontend/` og eventuelle public consumers
 
-Why it matters:
+## Aktuelle svagheder og opmærksomhedspunkter
 
-- Open-Meteo responses are requested in Copenhagen time.
-- The UI is intended for Danish users.
-- Recent fixes in the dashboard focus on making both `timestamp` and `reference_time` timezone-aware after loading from Hugging Face datasets.
-
-### Model predicts a correction, not the final value directly
-
-The model target is `dmi_error`, not actual temperature.
-
-Why it matters:
-
-- The ML system is designed as an adjustment layer on top of DMI/Open-Meteo forecast values.
-- Any future model changes must preserve compatibility with code that computes `ml_pred = dmi_temp_pred + correction`.
-
-## Drift And Scheduling Notes
-
-Scheduler opsummering (fra koden):
-
-| Space | Scheduler | Interval | Handling |
-|-------|-----------|----------|----------|
-| dmi-collector | ✅ Ja | 00:35, 03:35, 06:35, 09:35, 12:35, 15:35, 18:35, 21:35 | `generate_predictions()` - Nye 48-timers predictions |
-| dmi-collector | ✅ Ja | Hver time :12 | `verify_predictions()` - Verificer gamle predictions |
-| dmi-collector | ✅ Ja | Dagligt 05:45 | `update_daily()` - Daglig dataopdatering |
-| dmi-ml-trainer | ✅ Ja | Søndag 06:50 | `auto_retrain()` - Automatisk model retraining |
-| dmi-vs-ml-dashboard | ❌ Nej | - | On-demand via Gradio UI (5 min cache)
-
-Important limitation:
-
-- These schedules run in process-local Python threads using the `schedule` library.
-- They depend on the Space process staying alive and on Hugging Face runtime behavior.
-- There is no separate orchestration layer, external cron, or job queue in this repo.
-
-## Dependencies And External Services
-
-External services:
-
-- Open-Meteo forecast API
-- Open-Meteo archive API
-- Hugging Face Hub datasets
-- Hugging Face Spaces runtime
-
-Python dependencies by role:
-
-- Gradio for UI on all Spaces
-- `datasets` and `huggingface_hub` for Hub reads/writes
-- `pandas` and `numpy` for data shaping
-- `xgboost` and `joblib` for model train/load
-- `plotly` for dashboard charts
-- `schedule` for in-process scheduling
-- `tzdata` / `zoneinfo` for timezone handling
-
-## Current Risks And Weak Spots
-
-### Verification path is not operationally wired
-
-`verify_past_predictions()` exists in `dmi-collector`, but it is not scheduled and not exposed in the current Gradio UI. That means `verified` data may stop accumulating unless verification is triggered elsewhere.
-
-### Schedule reliability depends on Space uptime
-
-If a Space sleeps, restarts, or is not continuously running, scheduled tasks may be skipped.
-
-### Data writes are file replacement uploads
-
-The apps write local parquet or model files and then upload them to the dataset repo. There is no transactional protection between fetch, local write, and upload.
-
-### Dataset repos are artifact stores, not source repos
-
-Most commits in the dataset repos are generated upload commits such as `Upload data.parquet with huggingface_hub`. Treat them as generated state, not hand-maintained source history.
-
-### Encoding output looked inconsistent in terminal inspection
-
-The source files contain Danish text and emoji. In shell output they rendered with mojibake, which is likely a terminal codepage issue rather than broken source. Still, any text-edit changes should be verified carefully to avoid accidental encoding regressions.
-
-## Working Rules For Future Changes
-
-- Make source-code changes in the specific nested repo, not in the parent repo.
-- Commit and push each affected nested repo independently.
-- Do not assume the parent repo's git status tells anything about the nested repos.
-- Preserve `timestamp`-based deduplication unless there is a very explicit migration plan.
-- Be careful when changing scheduler behavior because a hidden job dependency currently exists between collector, trainer, and dashboard freshness.
-- When changing feature engineering in the collector, update trainer and dashboard expectations at the same time.
-- When changing dataset schema, treat both datasets and all three Spaces as one coordinated system.
-
-## Useful Local Commands
-
-Run inside `weather-predictor`:
-
-```powershell
-git -C .\hf\spaces\dmi-collector status -sb
-git -C .\hf\spaces\dmi-vs-ml-dashboard status -sb
-git -C .\hf\spaces\dmi-ml-trainer status -sb
-git -C .\hf\datasets\dmi-aarhus-weather-data status -sb
-git -C .\hf\datasets\dmi-aarhus-predictions status -sb
-```
-
-Push a changed nested repo:
-
-```powershell
-git -C .\hf\spaces\dmi-collector add .
-git -C .\hf\spaces\dmi-collector commit -m "Describe change"
-git -C .\hf\spaces\dmi-collector push
-```
-
-This same pattern applies to each nested Space or Dataset repo.
+- Legacy-filer (`data.parquet`, `xgb_model.pkl`, `predictions.parquet`, `history_snapshot.json`) eksisterer stadig og gør dokumentation mere kompleks.
+- Schedulerne kører som in-process Python-tråde og er derfor afhængige af Space-uptime.
+- Open-Meteo gratis/open access er ikke markeret som kommercielt brugbar pr. 12. marts 2026.
+- Root-repoets dokumentation skal derfor tydeligt skelne mellem kode, data og tredjepartsdatarettigheder.

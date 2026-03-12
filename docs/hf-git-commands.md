@@ -1,6 +1,12 @@
 # Hugging Face Git Commands
 
-Præcise PowerShell-kommandoer til at arbejde med alle lokale Hugging Face-spaces og datasets i dette repo.
+Præcise PowerShell-kommandoer til de selvstændige Hugging Face-repos i workspace'et.
+
+## Vigtigt
+
+- Root-repoet og `frontend/` ligger i hovedrepoet.
+- Alle mapper under `hf/` er separate git-repos.
+- Commit og push derfor hver Space og hvert dataset separat.
 
 ## Spaces
 
@@ -10,7 +16,7 @@ Præcise PowerShell-kommandoer til at arbejde med alle lokale Hugging Face-space
 git -C .\hf\spaces\dmi-collector status -sb
 git -C .\hf\spaces\dmi-collector pull --ff-only
 git -C .\hf\spaces\dmi-collector add .
-git -C .\hf\spaces\dmi-collector commit -m "Change for frontend"
+git -C .\hf\spaces\dmi-collector commit -m "Describe change"
 git -C .\hf\spaces\dmi-collector push
 git -C .\hf\spaces\dmi-collector remote -v
 ```
@@ -21,7 +27,7 @@ git -C .\hf\spaces\dmi-collector remote -v
 git -C .\hf\spaces\dmi-ml-trainer status -sb
 git -C .\hf\spaces\dmi-ml-trainer pull --ff-only
 git -C .\hf\spaces\dmi-ml-trainer add .
-git -C .\hf\spaces\dmi-ml-trainer commit -m "Frontend"
+git -C .\hf\spaces\dmi-ml-trainer commit -m "Describe change"
 git -C .\hf\spaces\dmi-ml-trainer push
 git -C .\hf\spaces\dmi-ml-trainer remote -v
 ```
@@ -61,9 +67,18 @@ git -C .\hf\datasets\dmi-aarhus-predictions push
 git -C .\hf\datasets\dmi-aarhus-predictions remote -v
 ```
 
-## Quick Reference
+## Root-repo og frontend
 
-Pull alt:
+```powershell
+git status -sb
+git add .
+git commit -m "Describe change"
+git push
+```
+
+## Hurtig reference
+
+Pull alle HF-repos:
 
 ```powershell
 git -C .\hf\spaces\dmi-collector pull --ff-only
@@ -73,9 +88,10 @@ git -C .\hf\datasets\dmi-aarhus-weather-data pull --ff-only
 git -C .\hf\datasets\dmi-aarhus-predictions pull --ff-only
 ```
 
-Vis status for alt:
+Vis status for hele workspace-strukturen:
 
 ```powershell
+git status -sb
 git -C .\hf\spaces\dmi-collector status -sb
 git -C .\hf\spaces\dmi-ml-trainer status -sb
 git -C .\hf\spaces\dmi-vs-ml-dashboard status -sb

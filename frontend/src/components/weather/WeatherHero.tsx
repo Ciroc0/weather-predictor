@@ -107,7 +107,7 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
                 {getWeatherDescription(current.weatherCode)}
               </p>
               {apparent && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Foeles som {apparent}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Føles som {apparent}</p>
               )}
             </div>
           </div>
