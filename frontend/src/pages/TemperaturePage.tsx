@@ -15,7 +15,7 @@ export function TemperaturePage() {
   const { response } = useDashboardOutlet();
 
   return (
-    <div className="page-stack">
+    <div className="space-y-6">
       <SeoHead config={temperatureSeo} />
       <PageIntro
         breadcrumbs={temperatureSeo.breadcrumbs}

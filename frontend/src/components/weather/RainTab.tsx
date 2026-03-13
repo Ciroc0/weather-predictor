@@ -12,15 +12,9 @@ import {
   YAxis,
 } from "recharts";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  ChartCard,
-  ChartFrame,
-  MetricCard,
-  SectionBanner,
-  SourceBadge,
-} from "@/components/weather/WeatherDisplay";
-import { formatDanishTime, formatShortDate, formatTooltipDateTime } from "@/lib/weather";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDanishTime, formatShortDate, formatTooltipDateTime, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
   HistoricalRainPoint,
@@ -59,17 +53,6 @@ interface TooltipPayloadItem {
   value: number;
 }
 
-const rainLegend = [
-  { label: "DMI", color: "#27D6F5" },
-  { label: "ML", color: "#F54927" },
-  { label: "Faktisk", color: "#0B2EF4" },
-];
-
-const forecastLegend = [
-  { label: "DMI", color: "#27D6F5" },
-  { label: "ML", color: "#F54927" },
-];
-
 export function RainTab({
   forecast,
   history,
@@ -78,7 +61,6 @@ export function RainTab({
   rainAmountStatus,
   explanations,
 }: RainTabProps) {
-  const isMobile = useIsMobile();
   const currentRain = forecast[0];
   const hasHistory = history.length > 0;
 
@@ -144,21 +126,19 @@ export function RainTab({
     }
 
     return (
-      <div className="max-w-[15rem] rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
         <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
-        <div className="space-y-1.5">
-          {payload.map((entry) => (
-            <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
-              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
-              <span className="font-semibold">
-                {entry.dataKey?.toLowerCase().includes("prob")
-                  ? `${entry.value.toFixed(0)}%`
-                  : `${entry.value.toFixed(1)} mm`}
-              </span>
-            </div>
-          ))}
-        </div>
+        {payload.map((entry) => (
+          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
+            <span className="font-semibold">
+              {entry.dataKey?.toLowerCase().includes("prob")
+                ? `${entry.value.toFixed(0)}%`
+                : `${entry.value.toFixed(1)} mm`}
+            </span>
+          </div>
+        ))}
       </div>
     );
   };
@@ -168,183 +148,315 @@ export function RainTab({
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="page-stack">
-      <SectionBanner
-        eyebrow="Regnstatus"
-        title="Start med et enkelt regnsvar"
-        description={explanations.sources}
-        badge={<SourceBadge source={rainEventStatus.hasActiveModel ? "ml" : "dmi"} />}
-      />
-
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {rainAlert ? (
-        <div className="rounded-[1.25rem] border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/70 dark:bg-blue-950/20 dark:text-blue-200">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
           <strong>{rainAlert.title}:</strong> {rainAlert.message}
         </div>
       ) : null}
 
+      <Card className="border-slate-200 dark:border-slate-800">
+        <CardContent className="space-y-3 p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={rainEventStatus.hasActiveModel ? "default" : "secondary"}>
+              Regnrisiko: {rainEventStatus.statusLabel}
+            </Badge>
+            <Badge variant={rainAmountStatus.hasActiveModel ? "default" : "secondary"}>
+              Regnmængde: {rainAmountStatus.statusLabel}
+            </Badge>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{explanations.sources}</p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard
-          icon={currentRain.effectiveRainProb > 50 ? <CloudRain className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          label="Regn lige nu"
-          value={currentRain.effectiveRainProb > 50 ? "Regn i sigte" : "Toert lige nu"}
-          detail={`ML: ${currentRain.mlRainProb.toFixed(0)}% • DMI: ${currentRain.dmiRainProb.toFixed(0)}%`}
-          badge={<SourceBadge source={currentRain.effectiveRainProbSource} />}
-          emphasis={currentRain.effectiveRainProb > 50 ? "warning" : "default"}
-        />
-        <MetricCard
-          icon={<Droplets className="h-4 w-4" />}
-          label="Naeste 24 timer"
-          value={`${forecast.slice(0, 24).reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm`}
-          detail="Samlet forventet nedboer i det naeste doegn."
-          badge={<SourceBadge source={currentRain.effectiveRainAmountSource} />}
-        />
-        <MetricCard
-          icon={<Umbrella className="h-4 w-4" />}
-          label="Naeste 48 timer"
-          value={`${forecast.reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm`}
-          detail={`${forecast.filter((point) => point.effectiveRainProb >= 50).length} timer med hoej regnrisiko.`}
-        />
+        <Card className={currentRain.effectiveRainProb > 50 ? "border-blue-300 dark:border-blue-800" : undefined}>
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Regnrisiko lige nu</p>
+            <div className="mt-2 flex items-center gap-2">
+              {currentRain.effectiveRainProb > 50 ? <CloudRain className="h-6 w-6 text-blue-500" /> : <Sun className="h-6 w-6 text-amber-500" />}
+              <span className="text-2xl font-bold">{currentRain.effectiveRainProb > 50 ? "Regn i sigte" : "Tørt lige nu"}</span>
+            </div>
+            <Badge variant={currentRain.effectiveRainProbSource === "ml" ? "default" : "secondary"} className="mt-3">
+              {getSourceLabel(currentRain.effectiveRainProbSource)}
+            </Badge>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              ML: {currentRain.mlRainProb.toFixed(0)}% • DMI: {currentRain.dmiRainProb.toFixed(0)}%
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Næste 24 timer</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-sky-500" />
+              <span className="text-xl font-bold">
+                {forecast.slice(0, 24).reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
+              </span>
+            </div>
+            <Badge variant={currentRain.effectiveRainAmountSource === "ml" ? "default" : "secondary"} className="mt-3">
+              {getSourceLabel(currentRain.effectiveRainAmountSource)}
+            </Badge>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Næste 48 timer</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Umbrella className="h-5 w-5 text-slate-500" />
+              <span className="text-xl font-bold">
+                {forecast.reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              {forecast.filter((point) => point.effectiveRainProb >= 50).length} timer med høj regnrisiko
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <ChartCard
-        title="Regnrisiko de naeste 48 timer"
-        description="Start her, hvis du vil vide hvornår der er størst sandsynlighed for regn."
-        legend={forecastLegend}
-      >
-        <ChartFrame>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={timelineData.filter((d) => d.dmiProbForecast !== null || d.mlProbForecast !== null)}
-              margin={{ top: 12, right: 12, left: isMobile ? -20 : -8, bottom: isMobile ? 20 : 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-              <XAxis dataKey="timeKey" tick={{ fontSize: 11 }} tickFormatter={(value: string) => formatShortDate(value)} tickMargin={10} interval={isMobile ? 7 : 3} />
-              <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="dmiProbForecast" name="DMI" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-              <Line type="monotone" dataKey="mlProbForecast" name="ML" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartFrame>
-      </ChartCard>
-
-      <ChartCard
-        title="Regnrisiko de sidste 7 dage"
-        description="Her kan du se hvor ofte DMI og ML pegede rigtigt i forhold til faktisk registreret regn."
-        legend={rainLegend}
-      >
-        <ChartFrame>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={timelineData.filter((d) => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)}
-              margin={{ top: 12, right: 12, left: isMobile ? -20 : -8, bottom: isMobile ? 20 : 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-              <XAxis dataKey="timeKey" tick={{ fontSize: 11 }} tickFormatter={(value: string) => formatShortDate(value)} tickMargin={10} interval={isMobile ? 10 : 5} />
-              <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-              <Tooltip content={<CustomTooltip />} />
-              {forecastBoundaryTimestamp ? (
-                <ReferenceLine
-                  x={forecastBoundaryTimestamp}
-                  stroke="#475569"
-                  strokeWidth={2}
-                  label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+      {/* Rain Probability Backtest */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CloudRain className="h-5 w-5 text-slate-500" />
+              Regnrisiko backtest - Sidste 7 dage
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timelineData.filter(d => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
                 />
-              ) : null}
-              {hasHistory ? <Bar dataKey="actualProb" name="Faktisk" fill="#0B2EF4" radius={[3, 3, 0, 0]} /> : null}
-              <Line type="monotone" dataKey="dmiProbHistory" name="DMI" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-              <Line type="monotone" dataKey="mlProbHistory" name="ML" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartFrame>
-      </ChartCard>
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                <Tooltip content={<CustomTooltip />} />
+                {forecastBoundaryTimestamp ? (
+                  <ReferenceLine
+                    x={forecastBoundaryTimestamp}
+                    stroke="#475569"
+                    strokeWidth={2}
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                  />
+                ) : null}
+                {hasHistory ? (
+                  <Bar dataKey="actualProb" name="Faktisk regn" fill="#0B2EF4" radius={[3, 3, 0, 0]} />
+                ) : null}
+                <Line type="monotone" dataKey="dmiProbHistory" name="DMI Backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                <Line type="monotone" dataKey="mlProbHistory" name="ML Backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-      <ChartCard
-        title="Regnmaengde de naeste 48 timer"
-        description="Brug denne graf, hvis du vil se hvor meget regn der kan falde, ikke kun sandsynligheden for at det sker."
-        legend={forecastLegend}
-      >
-        <ChartFrame>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={timelineData.filter((d) => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)}
-              margin={{ top: 12, right: 12, left: isMobile ? -20 : -8, bottom: isMobile ? 20 : 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-              <XAxis dataKey="timeKey" tick={{ fontSize: 11 }} tickFormatter={(value: string) => formatShortDate(value)} tickMargin={10} interval={isMobile ? 7 : 3} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="dmiAmountForecast" name="DMI" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-              <Line type="monotone" dataKey="mlAmountForecast" name="ML" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartFrame>
-      </ChartCard>
-
-      <ChartCard
-        title="Regnmaengde de sidste 7 dage"
-        description={rainAmountStatus.statusDescription}
-        legend={rainLegend}
-      >
-        <ChartFrame>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={timelineData.filter((d) => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)}
-              margin={{ top: 12, right: 12, left: isMobile ? -20 : -8, bottom: isMobile ? 20 : 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-              <XAxis dataKey="timeKey" tick={{ fontSize: 11 }} tickFormatter={(value: string) => formatShortDate(value)} tickMargin={10} interval={isMobile ? 10 : 5} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
-              <Tooltip content={<CustomTooltip />} />
-              {forecastBoundaryTimestamp ? (
-                <ReferenceLine
-                  x={forecastBoundaryTimestamp}
-                  stroke="#475569"
-                  strokeWidth={2}
-                  label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+      {/* Rain Probability Forecast */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CloudRain className="h-5 w-5 text-slate-500" />
+              Regnrisiko forecast - Næste 48 timer
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timelineData.filter(d => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
                 />
-              ) : null}
-              {hasHistory ? <Bar dataKey="actualAmount" name="Faktisk" fill="#0B2EF4" radius={[3, 3, 0, 0]} /> : null}
-              <Line type="monotone" dataKey="dmiAmountHistory" name="DMI" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-              <Line type="monotone" dataKey="mlAmountHistory" name="ML" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.95} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartFrame>
-      </ChartCard>
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="dmiProbForecast"
+                  name="DMI Forecast"
+                  stroke="#27D6F5"
+                  strokeWidth={3}
+                  dot={false}
+                  strokeOpacity={0.9}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mlProbForecast"
+                  name="ML Forecast"
+                  stroke="#F54927"
+                  strokeWidth={3}
+                  dot={false}
+                  strokeOpacity={0.9}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Sammenligning af DMI's regnrisiko, ML-model og faktisk registreret regn de sidste 7 dage.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Rain Amount Backtest */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-slate-500" />
+              Regnmængde backtest - Sidste 7 dage
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400">{rainAmountStatus.statusDescription}</p>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timelineData.filter(d => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={5}
+                />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
+                <Tooltip content={<CustomTooltip />} />
+                {forecastBoundaryTimestamp ? (
+                  <ReferenceLine
+                    x={forecastBoundaryTimestamp}
+                    stroke="#475569"
+                    strokeWidth={2}
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                  />
+                ) : null}
+                {hasHistory ? (
+                  <Bar dataKey="actualAmount" name="Faktisk regnmængde" fill="#0B2EF4" radius={[3, 3, 0, 0]} />
+                ) : null}
+                <Line type="monotone" dataKey="dmiAmountHistory" name="DMI Backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                <Line type="monotone" dataKey="mlAmountHistory" name="ML Backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rain Amount Forecast */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Droplets className="h-5 w-5 text-slate-500" />
+              Regnmængde forecast - Næste 48 timer
+            </CardTitle>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+          </p>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timelineData.filter(d => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <XAxis
+                  dataKey="timeKey"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value: string) => formatShortDate(value)}
+                  tickMargin={8}
+                  interval={3}
+                />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="dmiAmountForecast"
+                  name="DMI Forecast"
+                  stroke="#27D6F5"
+                  strokeWidth={3}
+                  dot={false}
+                  strokeOpacity={0.9}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mlAmountForecast"
+                  name="ML Forecast"
+                  stroke="#F54927"
+                  strokeWidth={3}
+                  dot={false}
+                  strokeOpacity={0.9}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
       {dryPeriods.length > 0 ? (
-        <section className="section-stack">
-          <div className="space-y-2">
-            <p className="section-eyebrow">Mulige pauser i regnen</p>
-            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Mulige toerre perioder</h3>
-            <p className="copy-measure text-sm leading-6 text-slate-600 dark:text-slate-400">
-              Hvis du vil planlaegge en kort tur uden regn, er det disse vinduer du skal starte med at kigge paa.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sun className="h-4 w-4 text-amber-500" />
+              Mulige tørre perioder
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {dryPeriods.map((period) => (
               <div
                 key={`${period.start}-${period.end}`}
-                className="panel-card flex min-w-0 items-center justify-between gap-3 rounded-[1.35rem] py-0"
+                className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/50"
               >
-                <div className="flex min-w-0 items-center gap-3 p-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                     <Cloud className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-slate-50">
-                      kl. {formatDanishTime(forecast[period.start]?.timestamp)} til kl. {formatDanishTime(forecast[period.end]?.timestamp)}
+                  <div>
+                    <p className="font-medium">
+                      kl. {formatDanishTime(forecast[period.start]?.timestamp)} - kl. {formatDanishTime(forecast[period.end]?.timestamp)}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt dato"}
+                      {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt"}
                     </p>
                   </div>
                 </div>
-                <div className="pr-4 text-sm font-semibold text-amber-700 dark:text-amber-300">{period.hours} t</div>
+                <Badge variant="secondary">{period.hours} timer</Badge>
               </div>
             ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       ) : null}
     </motion.div>
   );

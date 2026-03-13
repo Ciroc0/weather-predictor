@@ -15,7 +15,7 @@ export function WindPage() {
   const { response } = useDashboardOutlet();
 
   return (
-    <div className="page-stack">
+    <div className="space-y-6">
       <SeoHead config={windSeo} />
       <PageIntro
         breadcrumbs={windSeo.breadcrumbs}
