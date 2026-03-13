@@ -12,30 +12,38 @@ export function PageState({ mode, title, description, action }: PageStateProps) 
   const config = {
     loading: {
       icon: <LoaderCircle className="h-8 w-8 animate-spin" />,
-      title: title || "Indlæser dashboard",
+      title: title || "Indlaeser dashboard",
       description: description || "Live forecast, verifikation og modelmetadata hentes nu.",
+      tone: "from-sky-50 to-emerald-50 dark:from-slate-900 dark:to-slate-950",
     },
     error: {
       icon: <AlertTriangle className="h-8 w-8" />,
       title: title || "Noget gik galt",
-      description: description || "Backend-data kunne ikke læses.",
+      description: description || "Backend-data kunne ikke laeses.",
+      tone: "from-rose-50 to-amber-50 dark:from-slate-900 dark:to-rose-950/20",
     },
     empty: {
       icon: <CloudOff className="h-8 w-8" />,
-      title: title || "Ingen data tilgængelige",
+      title: title || "Ingen data tilgaengelige",
       description: description || "Snapshot indeholdt ingen forecast-data.",
+      tone: "from-slate-50 to-sky-50 dark:from-slate-900 dark:to-slate-950",
     },
   }[mode];
 
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+    <div className="flex min-h-[50vh] items-center justify-center py-8">
+      <div
+        className={[
+          "w-full max-w-xl rounded-[1.75rem] border border-slate-200 bg-gradient-to-br p-8 text-center shadow-sm dark:border-slate-800",
+          config.tone,
+        ].join(" ")}
+      >
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-white/90 text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-100">
           {config.icon}
         </div>
-        <h2 className="text-xl font-semibold">{config.title}</h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{config.description}</p>
-        {action ? <div className="mt-6">{action}</div> : null}
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{config.title}</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">{config.description}</p>
+        {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
       </div>
     </div>
   );

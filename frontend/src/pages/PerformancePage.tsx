@@ -18,7 +18,7 @@ export function PerformancePage() {
   const snapshot = response.snapshot;
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <SeoHead config={performanceSeo} />
       <PageIntro
         breadcrumbs={performanceSeo.breadcrumbs}

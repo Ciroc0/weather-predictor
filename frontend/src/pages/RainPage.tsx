@@ -15,7 +15,7 @@ export function RainPage() {
   const { response } = useDashboardOutlet();
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <SeoHead config={rainSeo} />
       <PageIntro
         breadcrumbs={rainSeo.breadcrumbs}

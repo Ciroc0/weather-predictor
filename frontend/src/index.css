@@ -32,6 +32,11 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --page-gutter: clamp(1rem, 0.85rem + 0.8vw, 1.75rem);
+    --section-gap: clamp(1.25rem, 1rem + 1vw, 2rem);
+    --panel-radius: 1.5rem;
+    --content-measure: 68ch;
+    --shadow-soft: 0 20px 45px -28px rgb(15 23 42 / 0.2);
   }
 
   .dark {
@@ -69,7 +74,58 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    text-wrap: pretty;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd,
+  dt {
+    overflow-wrap: anywhere;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .page-stack {
+    gap: var(--section-gap);
+    @apply flex min-w-0 flex-col;
+  }
+
+  .section-stack {
+    @apply flex min-w-0 flex-col gap-5 md:gap-6;
+  }
+
+  .panel-card {
+    border-radius: var(--panel-radius);
+    box-shadow: var(--shadow-soft);
+    @apply min-w-0 border-slate-200/80 bg-white/90 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90;
+  }
+
+  .soft-surface {
+    @apply rounded-[1.25rem] border border-slate-200/80 bg-slate-50/85 dark:border-slate-800 dark:bg-slate-800/55;
+  }
+
+  .copy-measure {
+    max-width: var(--content-measure);
+  }
+
+  .section-eyebrow {
+    @apply text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400;
   }
 }
