@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   Award,
   BarChart3,
   Calendar,
@@ -8,9 +9,10 @@ import {
   Cpu,
   Target,
   TrendingUp,
-  AlertTriangle,
 } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -20,10 +22,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  Area,
-  AreaChart,
 } from "recharts";
 
+import { sharedTimeAxisProps } from "@/lib/chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,6 @@ import { Progress } from "@/components/ui/progress";
 import {
   formatDanishDateTime,
   formatMetric,
-  formatShortDate,
   formatTooltipDateTime,
   getFeatureTargetBadge,
   getReadableMetricName,
@@ -69,6 +69,19 @@ interface TooltipPayloadItem {
   value: number;
 }
 
+interface TimeSeriesPoint {
+  timeKey: string;
+  dmi: number | null;
+  ml: number | null;
+  actual: number | null;
+}
+
+interface ErrorPoint {
+  timeKey: string;
+  dmiError: number | null;
+  mlError: number | null;
+}
+
 const sectionTargets: Record<PerformanceSection, ForecastTarget[]> = {
   temperature: ["temperature"],
   wind: ["wind_speed", "wind_gust"],
@@ -81,16 +94,18 @@ const sectionLabels: Record<PerformanceSection, string> = {
   rain: "Regn",
 };
 
-function HistoryTooltip({
+function SeriesTooltip({
   active,
   payload,
   label,
   suffix = "",
+  decimals = 1,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   label?: string;
   suffix?: string;
+  decimals?: number;
 }) {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -104,7 +119,7 @@ function HistoryTooltip({
           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
           <span className="font-semibold">
-            {entry.value.toFixed(1)}
+            {entry.value.toFixed(decimals)}
             {suffix}
           </span>
         </div>
@@ -113,78 +128,120 @@ function HistoryTooltip({
   );
 }
 
-function ErrorTooltip({
-  active,
-  payload,
-  label,
+function TimeSeriesChart({
+  data,
   suffix = "",
+  yDomain,
+  actualName = "Faktisk vejr",
+  dmiName = "DMI-prognose",
+  mlName = "ML-prognose",
 }: {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-  label?: string;
+  data: TimeSeriesPoint[];
   suffix?: string;
+  yDomain?: [number, number] | undefined;
+  actualName?: string;
+  dmiName?: string;
+  mlName?: string;
 }) {
-  if (!active || !payload || payload.length === 0) {
-    return null;
-  }
-
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-      <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
-      {payload.map((entry) => (
-        <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
-          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
-          <span className="font-semibold">
-            {entry.value.toFixed(2)}
-            {suffix}
-          </span>
-        </div>
-      ))}
+    <div className="h-[320px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+          <XAxis {...sharedTimeAxisProps} />
+          <YAxis tick={{ fontSize: 12 }} domain={yDomain} />
+          <Tooltip content={<SeriesTooltip suffix={suffix} />} />
+          <Line type="monotone" dataKey="dmi" name={dmiName} stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+          <Line type="monotone" dataKey="ml" name={mlName} stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+          <Line type="monotone" dataKey="actual" name={actualName} stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
-// Calculate absolute errors for each data point
-function calculateErrors(
-  history: DashboardHistory,
-  section: PerformanceSection
-): Array<{ timeKey: string; dmiError: number | null; mlError: number | null }> {
-  if (section === "temperature") {
-    return history.temperature
-      .filter((p) => p.actual !== null)
-      .map((p) => ({
-        timeKey: p.timestamp,
-        dmiError: p.dmiTemp !== null ? Math.abs(p.dmiTemp - (p.actual ?? 0)) : null,
-        mlError: p.mlTemp !== null ? Math.abs(p.mlTemp - (p.actual ?? 0)) : null,
-      }));
-  }
-  if (section === "wind") {
-    return history.wind
-      .filter((p) => p.actualWindSpeed !== null)
-      .map((p) => ({
-        timeKey: p.timestamp,
-        dmiError: p.dmiWindSpeed !== null ? Math.abs(p.dmiWindSpeed - (p.actualWindSpeed ?? 0)) : null,
-        mlError: p.mlWindSpeed !== null ? Math.abs(p.mlWindSpeed - (p.actualWindSpeed ?? 0)) : null,
-      }));
-  }
-  // rain - use rain_amount for error calculation
-  return history.rain
-    .filter((p) => p.actualRainAmount !== null)
-    .map((p) => ({
-      timeKey: p.timestamp,
-      dmiError: p.dmiRainAmount !== null ? Math.abs(p.dmiRainAmount - (p.actualRainAmount ?? 0)) : null,
-      mlError: p.mlRainAmount !== null ? Math.abs(p.mlRainAmount - (p.actualRainAmount ?? 0)) : null,
-    }));
+function ErrorChart({
+  data,
+  title,
+  suffix = "",
+  yDomain,
+}: {
+  data: ErrorPoint[];
+  title: string;
+  suffix?: string;
+  yDomain?: [number, number] | undefined;
+}) {
+  return (
+    <div className="h-[280px] w-full">
+      <p className="mb-2 text-sm font-medium text-slate-600 dark:text-slate-400">{title}</p>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+          <XAxis {...sharedTimeAxisProps} />
+          <YAxis tick={{ fontSize: 12 }} domain={yDomain} />
+          <Tooltip content={<SeriesTooltip suffix={suffix} decimals={2} />} />
+          <Area type="monotone" dataKey="dmiError" name="DMI fejl" stroke="#27D6F5" fill="#27D6F5" fillOpacity={0.28} strokeWidth={2} dot={false} />
+          <Area type="monotone" dataKey="mlError" name="ML fejl" stroke="#F54927" fill="#F54927" fillOpacity={0.28} strokeWidth={2} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
-function calculateRainProbErrors(history: DashboardHistory): Array<{ timeKey: string; dmiError: number | null; mlError: number | null }> {
-  return history.rain
-    .filter((p) => p.actualRainEvent !== null)
-    .map((p) => ({
-      timeKey: p.timestamp,
-      dmiError: p.dmiRainProb !== null ? Math.abs(p.dmiRainProb - (p.actualRainEvent ?? 0) * 100) : null,
-      mlError: p.mlRainProb !== null ? Math.abs(p.mlRainProb - (p.actualRainEvent ?? 0) * 100) : null,
+function buildTemperatureSeries(history: DashboardHistory): TimeSeriesPoint[] {
+  return history.temperature.map((point) => ({
+    timeKey: point.timestamp,
+    dmi: point.dmiTemp,
+    ml: point.mlTemp,
+    actual: point.actual,
+  }));
+}
+
+function buildWindSpeedSeries(history: DashboardHistory): TimeSeriesPoint[] {
+  return history.wind.map((point) => ({
+    timeKey: point.timestamp,
+    dmi: point.dmiWindSpeed,
+    ml: point.mlWindSpeed,
+    actual: point.actualWindSpeed,
+  }));
+}
+
+function buildWindGustSeries(history: DashboardHistory): TimeSeriesPoint[] {
+  return history.wind.map((point) => ({
+    timeKey: point.timestamp,
+    dmi: point.dmiWindGust,
+    ml: point.mlWindGust,
+    actual: point.actualWindGust,
+  }));
+}
+
+function buildRainProbabilitySeries(history: DashboardHistory): TimeSeriesPoint[] {
+  return history.rain.map((point) => ({
+    timeKey: point.timestamp,
+    dmi: point.dmiRainProb,
+    ml: point.mlRainProb,
+    actual: point.actualRainEvent !== null ? point.actualRainEvent * 100 : null,
+  }));
+}
+
+function buildRainAmountSeries(history: DashboardHistory): TimeSeriesPoint[] {
+  return history.rain.map((point) => ({
+    timeKey: point.timestamp,
+    dmi: point.dmiRainAmount,
+    ml: point.mlRainAmount,
+    actual: point.actualRainAmount,
+  }));
+}
+
+function toErrorData(
+  rows: Array<{ timeKey: string; actual: number | null; dmi: number | null; ml: number | null }>,
+): ErrorPoint[] {
+  return rows
+    .filter((row) => row.actual !== null)
+    .map((row) => ({
+      timeKey: row.timeKey,
+      dmiError: row.dmi !== null && row.actual !== null ? Math.abs(row.dmi - row.actual) : null,
+      mlError: row.ml !== null && row.actual !== null ? Math.abs(row.ml - row.actual) : null,
     }));
 }
 
@@ -217,6 +274,7 @@ export function PerformanceTab({
       ml: bucket.mlMetric,
       improvementPct: bucket.improvementPct,
       target: bucket.target,
+      bucketKey: bucket.bucket,
     }));
 
   const visibleFeatures = useMemo(() => {
@@ -230,12 +288,17 @@ export function PerformanceTab({
     status: targetStatus[target],
   }));
 
-  // Calculate errors for current section
-  const errorData = useMemo(() => calculateErrors(history, section), [history, section]);
-  const rainProbErrorData = useMemo(() => calculateRainProbErrors(history), [history]);
+  const temperatureSeries = useMemo(() => buildTemperatureSeries(history), [history]);
+  const windSpeedSeries = useMemo(() => buildWindSpeedSeries(history), [history]);
+  const windGustSeries = useMemo(() => buildWindGustSeries(history), [history]);
+  const rainProbabilitySeries = useMemo(() => buildRainProbabilitySeries(history), [history]);
+  const rainAmountSeries = useMemo(() => buildRainAmountSeries(history), [history]);
 
-  const hasErrorData = errorData.some((d) => d.dmiError !== null || d.mlError !== null);
-  const hasRainProbErrorData = rainProbErrorData.some((d) => d.dmiError !== null || d.mlError !== null);
+  const temperatureErrors = useMemo(() => toErrorData(temperatureSeries), [temperatureSeries]);
+  const windSpeedErrors = useMemo(() => toErrorData(windSpeedSeries), [windSpeedSeries]);
+  const windGustErrors = useMemo(() => toErrorData(windGustSeries), [windGustSeries]);
+  const rainProbabilityErrors = useMemo(() => toErrorData(rainProbabilitySeries), [rainProbabilitySeries]);
+  const rainAmountErrors = useMemo(() => toErrorData(rainAmountSeries), [rainAmountSeries]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -276,7 +339,7 @@ export function PerformanceTab({
                   {verification.winRate !== null ? `${verification.winRate.toFixed(1)}%` : "—"}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Viser hvor ofte vores ML ramte nærmere virkeligheden end DMI's prognose.
+                  Viser hvor ofte vores ML ramte nærmere virkeligheden end DMI&apos;s prognose.
                 </p>
               </div>
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
@@ -347,7 +410,6 @@ export function PerformanceTab({
         ))}
       </div>
 
-      {/* Value Comparison Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -360,93 +422,18 @@ export function PerformanceTab({
         </CardHeader>
         <CardContent className="space-y-6">
           {section === "temperature" ? (
-            history.temperature.length > 0 ? (
-                <div className="h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={history.temperature.map((point) => ({
-                      timeKey: point.timestamp,
-                      dmi: point.dmiTemp,
-                      ml: point.mlTemp,
-                      actual: point.actual,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis
-                      dataKey="timeKey"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value: string) => formatShortDate(value)}
-                      tickMargin={8}
-                      interval={5}
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip content={<HistoryTooltip suffix="°C" />} />
-                    <Line type="monotone" dataKey="dmi" name="DMI-prognose" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    <Line type="monotone" dataKey="ml" name="ML-prognose" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    <Line type="monotone" dataKey="actual" name="Faktisk vejr" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            temperatureSeries.length > 0 ? (
+              <TimeSeriesChart data={temperatureSeries} suffix="°C" />
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">Ingen verificeret temperaturhistorik endnu.</p>
             )
           ) : null}
 
           {section === "wind" ? (
-            history.wind.length > 0 ? (
+            windSpeedSeries.length > 0 ? (
               <div className="grid gap-6 lg:grid-cols-2">
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={history.wind.map((point) => ({
-                        timeKey: point.timestamp,
-                        dmi: point.dmiWindSpeed,
-                        ml: point.mlWindSpeed,
-                        actual: point.actualWindSpeed,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI vind" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="ml" name="ML vind" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vind" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={history.wind.map((point) => ({
-                        timeKey: point.timestamp,
-                        dmi: point.dmiWindGust,
-                        ml: point.mlWindGust,
-                        actual: point.actualWindGust,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<HistoryTooltip suffix=" m/s" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI vindstød" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="ml" name="ML vindstød" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk vindstød" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <TimeSeriesChart data={windSpeedSeries} suffix=" m/s" actualName="Faktisk vind" dmiName="DMI vind" mlName="ML vind" />
+                <TimeSeriesChart data={windGustSeries} suffix=" m/s" actualName="Faktisk vindstød" dmiName="DMI vindstød" mlName="ML vindstød" />
               </div>
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">Ingen verificeret vindhistorik endnu.</p>
@@ -454,60 +441,10 @@ export function PerformanceTab({
           ) : null}
 
           {section === "rain" ? (
-            history.rain.length > 0 ? (
+            rainProbabilitySeries.length > 0 ? (
               <div className="grid gap-6 lg:grid-cols-2">
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={history.rain.map((point) => ({
-                        timeKey: point.timestamp,
-                        dmi: point.dmiRainProb,
-                        ml: point.mlRainProb,
-                        actual: point.actualRainEvent !== null ? point.actualRainEvent * 100 : null,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
-                      <Tooltip content={<HistoryTooltip suffix="%" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI regnrisiko" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="ml" name="ML regnrisiko" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regn" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={history.rain.map((point) => ({
-                        timeKey: point.timestamp,
-                        dmi: point.dmiRainAmount,
-                        ml: point.mlRainAmount,
-                        actual: point.actualRainAmount,
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<HistoryTooltip suffix=" mm" />} />
-                      <Line type="monotone" dataKey="dmi" name="DMI regnmængde" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="ml" name="ML regnmængde" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                      <Line type="monotone" dataKey="actual" name="Faktisk regnmængde" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <TimeSeriesChart data={rainProbabilitySeries} suffix="%" yDomain={[0, 100]} actualName="Faktisk regn" dmiName="DMI regnrisiko" mlName="ML regnrisiko" />
+                <TimeSeriesChart data={rainAmountSeries} suffix=" mm" actualName="Faktisk regnmængde" dmiName="DMI regnmængde" mlName="ML regnmængde" />
               </div>
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">Ingen verificeret regnhistorik endnu.</p>
@@ -516,7 +453,6 @@ export function PerformanceTab({
         </CardContent>
       </Card>
 
-      {/* Error Analysis Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -524,169 +460,34 @@ export function PerformanceTab({
             Fejlanalyse: {sectionLabels[section]}
           </CardTitle>
           <CardDescription>
-            Viser absolutte fejl for DMI og ML prognoser sammenlignet med faktisk vejr. Lavere er bedre.
+            Viser absolutte fejl for DMI og ML-prognoser sammenlignet med faktisk vejr. Lavere er bedre.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {section === "temperature" ? (
-            hasErrorData ? (
-              <>
-              <div className="h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={errorData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis
-                      dataKey="timeKey"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value: string) => formatShortDate(value)}
-                      tickMargin={8}
-                      interval={5}
-                    />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
-                    <Tooltip content={<ErrorTooltip suffix="°C" />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="dmiError" 
-                      name="DMI fejl" 
-                      stroke="#27D6F5" 
-                      fill="#27D6F5"
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="mlError" 
-                      name="ML fejl" 
-                      stroke="#F54927" 
-                      fill="#F54927"
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="h-[280px] w-full">
-                <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Vind fejl (m/s)</p>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={errorData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis
-                      dataKey="timeKey"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value: string) => formatShortDate(value)}
-                      tickMargin={8}
-                      interval={5}
-                    />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
-                    <Tooltip content={<ErrorTooltip suffix=" m/s" />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="dmiError" 
-                      name="DMI fejl" 
-                      stroke="#27D6F5" 
-                      fill="#27D6F5"
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="mlError" 
-                      name="ML fejl" 
-                      stroke="#F54927" 
-                      fill="#F54927"
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              </>
+            temperatureErrors.length > 0 ? (
+              <ErrorChart data={temperatureErrors} title="Temperaturfejl (°C)" suffix="°C" />
             ) : (
-            <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
-          )
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
+            )
+          ) : null}
+
+          {section === "wind" ? (
+            windSpeedErrors.length > 0 ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <ErrorChart data={windSpeedErrors} title="Vindfejl (m/s)" suffix=" m/s" />
+                <ErrorChart data={windGustErrors} title="Vindstødsfejl (m/s)" suffix=" m/s" />
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
+            )
           ) : null}
 
           {section === "rain" ? (
-            hasRainProbErrorData || hasErrorData ? (
+            rainProbabilityErrors.length > 0 ? (
               <div className="grid gap-6 lg:grid-cols-2">
-                <div className="h-[280px] w-full">
-                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Regnrisiko fejl (%-point)</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={rainProbErrorData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
-                      <Tooltip content={<ErrorTooltip suffix="%" />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="dmiError" 
-                        name="DMI fejl" 
-                        stroke="#64748b" 
-                        fill="#64748b"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="mlError" 
-                        name="ML fejl" 
-                        stroke="#10b981" 
-                        fill="#10b981"
-                        fillOpacity={0.3}
-                        strokeWidth={2} 
-                        dot={false} 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-[280px] w-full">
-                  <p className="text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Regnmængde fejl</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={errorData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                      <XAxis
-                        dataKey="timeKey"
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(value: string) => formatShortDate(value)}
-                        tickMargin={8}
-                        interval={5}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<ErrorTooltip suffix=" mm" />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="dmiError" 
-                        name="DMI fejl" 
-                        stroke="#27D6F5" 
-                        fill="#27D6F5"
-                        fillOpacity={0.3}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="mlError" 
-                        name="ML fejl" 
-                        stroke="#F54927" 
-                        fill="#F54927"
-                        fillOpacity={0.3}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                <ErrorChart data={rainProbabilityErrors} title="Regnrisikofejl (%-point)" suffix="%" yDomain={[0, 100]} />
+                <ErrorChart data={rainAmountErrors} title="Regnmængdefejl (mm)" suffix=" mm" />
               </div>
             ) : (
               <p className="text-sm text-slate-600 dark:text-slate-400">Ingen fejldata tilgængelig endnu.</p>
@@ -709,8 +510,8 @@ export function PerformanceTab({
               <BarChart data={bucketRows} margin={{ top: 16, right: 24, left: 0, bottom: 0 }} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="bucket" tick={{ fontSize: 12 }} width={160} />
-                <Tooltip content={<HistoryTooltip />} />
+                <YAxis type="category" dataKey="bucket" tick={{ fontSize: 12 }} width={120} />
+                <Tooltip content={<SeriesTooltip />} />
                 <Bar dataKey="dmi" name="DMI-prognose" fill="#27D6F5" radius={[0, 4, 4, 0]} />
                 <Bar dataKey="ml" name="ML-prognose" fill="#F54927" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -719,12 +520,16 @@ export function PerformanceTab({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {bucketRows.map((bucket) => (
               <div
-                key={`${bucket.target}-${bucket.bucket}`}
+                key={`${bucket.target}-${bucket.bucketKey}`}
                 className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <Badge variant="outline">{bucket.bucket}</Badge>
-                  <Badge variant="secondary">{getTargetLabel(targetLabels, bucket.target)}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="whitespace-normal leading-relaxed">
+                    {bucket.bucket}
+                  </Badge>
+                  <Badge variant="secondary" className="whitespace-normal leading-relaxed">
+                    {getTargetLabel(targetLabels, bucket.target)}
+                  </Badge>
                 </div>
                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                   DMI: {formatMetric(bucket.dmi, "", 3)}
@@ -749,7 +554,7 @@ export function PerformanceTab({
               Hvad modellen lægger vægt på
             </CardTitle>
             <CardDescription>
-              Det som modellen lægger mest vægt på i sine beregninger.
+              Det, som modellen lægger mest vægt på i sine beregninger.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -829,7 +634,7 @@ export function PerformanceTab({
             <p className="text-sm text-slate-500 dark:text-slate-400">Punkter med facit</p>
             <p className="text-xl font-semibold">{verification.totalPredictions.toLocaleString("da-DK")}</p>
           </div>
-          <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+          <div className="rounded-2xl bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
             {verification.winRate !== null
               ? `ML var tættest på virkeligheden i ${verification.winRate.toFixed(0)}% af temperaturpunkterne`
               : "Snapshot mangler win-rate endnu"}

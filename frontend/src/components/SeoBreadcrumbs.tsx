@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -26,16 +27,18 @@ export function SeoBreadcrumbs({ items }: SeoBreadcrumbsProps) {
           const isLast = index === items.length - 1;
 
           return (
-            <BreadcrumbItem key={item.path}>
-              {isLast ? (
-                <BreadcrumbPage>{item.name}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={item.path}>{item.name}</Link>
-                </BreadcrumbLink>
-              )}
+            <Fragment key={item.path}>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{item.name}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link to={item.path}>{item.name}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
               {!isLast ? <BreadcrumbSeparator /> : null}
-            </BreadcrumbItem>
+            </Fragment>
           );
         })}
       </BreadcrumbList>

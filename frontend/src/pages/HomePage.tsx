@@ -107,15 +107,17 @@ export function HomePage() {
         })}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-        <Card className="border-slate-200 dark:border-slate-800">
+      <section className="grid gap-6 lg:items-start lg:grid-cols-[1.3fr_0.7fr]">
+        <Card className="self-start border-slate-200 dark:border-slate-800">
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Næste 12 timer i Aarhus</CardTitle>
-              <Badge variant="secondary">{getTemperatureImprovementText(snapshot.verification)}</Badge>
+              <Badge variant="secondary" className="max-w-full whitespace-normal text-left leading-relaxed">
+                {getTemperatureImprovementText(snapshot.verification)}
+              </Badge>
             </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
             {preview.map((hour) => (
               <div
                 key={hour.timestamp}
@@ -150,7 +152,7 @@ export function HomePage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-6 self-start">
           <Card className="border-slate-200 dark:border-slate-800">
             <CardHeader>
               <CardTitle>Vejrvarsler</CardTitle>

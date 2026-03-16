@@ -14,6 +14,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { sharedTimeAxisProps } from "@/lib/chart";
 import { formatDanishTime, formatShortDate, formatTooltipDateTime, getSourceLabel } from "@/lib/weather";
 import type {
   DashboardExplanations,
@@ -215,33 +216,26 @@ export function RainTab({
         </Card>
       </div>
 
-      {/* Rain Probability Backtest */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <CloudRain className="h-5 w-5 text-slate-500" />
-              Regnrisiko backtest - Sidste 7 dage
+              Regnrisiko backtest - sidste 7 dage
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={5}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
@@ -263,35 +257,28 @@ export function RainTab({
         </CardContent>
       </Card>
 
-      {/* Rain Probability Forecast */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <CloudRain className="h-5 w-5 text-slate-500" />
-              Regnrisiko forecast - Næste 48 timer
+              Regnrisiko forecast - næste 48 timer
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+            Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={3}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
@@ -316,23 +303,22 @@ export function RainTab({
             </ResponsiveContainer>
           </div>
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            Sammenligning af DMI's regnrisiko, ML-model og faktisk registreret regn de sidste 7 dage.
+            Sammenligning af DMI&apos;s regnrisiko, ML-modellen og faktisk registreret regn de sidste 7 dage.
           </p>
         </CardContent>
       </Card>
 
-      {/* Rain Amount Backtest */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Droplets className="h-5 w-5 text-slate-500" />
-              Regnmængde backtest - Sidste 7 dage
+              Regnmængde backtest - sidste 7 dage
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -340,15 +326,9 @@ export function RainTab({
           <p className="text-sm text-slate-600 dark:text-slate-400">{rainAmountStatus.statusDescription}</p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={5}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
@@ -370,35 +350,28 @@ export function RainTab({
         </CardContent>
       </Card>
 
-      {/* Rain Amount Forecast */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Droplets className="h-5 w-5 text-slate-500" />
-              Regnmængde forecast - Næste 48 timer
+              Regnmængde forecast - næste 48 timer
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+            Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={3}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line

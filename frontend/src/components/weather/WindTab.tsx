@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { AlertTriangle, Navigation, Wind } from "lucide-react";
 import {
@@ -15,10 +14,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { sharedTimeAxisProps } from "@/lib/chart";
 import {
   formatDanishTime,
-  formatShortDate,
   formatTooltipDateTime,
   getSourceLabel,
   getWindDirectionLabel,
@@ -92,7 +90,6 @@ export function WindTab({
   const hasMlSpeed = windStatus.hasActiveModel && forecast.some((point) => point.mlWindSpeed !== null);
   const hasMlGust = gustStatus.hasActiveModel && forecast.some((point) => point.mlWindGust !== null);
   const hasHistory = history.length > 0;
-  // Always show all data series
   const showDmi = true;
   const showMlSpeed = hasMlSpeed;
   const showMlGust = hasMlGust;
@@ -243,33 +240,26 @@ export function WindTab({
         </Card>
       </div>
 
-      {/* Wind Speed Backtest */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Wind className="h-5 w-5 text-slate-500" />
-              Vindhastighed backtest - Sidste 7 dage
+              Vindhastighed backtest - sidste 7 dage
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.actualSpeed !== null || d.dmiSpeedHistory !== null || d.mlSpeedHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.actualSpeed !== null || d.dmiSpeedHistory !== null || d.mlSpeedHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={5}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
@@ -293,40 +283,33 @@ export function WindTab({
             </ResponsiveContainer>
           </div>
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            Sammenligning af DMI's vindprognose, ML-model og faktisk målt vindhastighed de sidste 7 dage.
+            Sammenligning af DMI&apos;s vindprognose, ML-modellen og faktisk målt vindhastighed de sidste 7 dage.
           </p>
         </CardContent>
       </Card>
 
-      {/* Wind Speed Forecast */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <Wind className="h-5 w-5 text-slate-500" />
-              Vindhastighed forecast - Næste 48 timer
+              Vindhastighed forecast - næste 48 timer
             </CardTitle>
-            <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-            Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+            Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={timelineData.filter(d => d.dmiSpeedForecast !== null || d.mlSpeedForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={timelineData.filter((d) => d.dmiSpeedForecast !== null || d.mlSpeedForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                <XAxis
-                  dataKey="timeKey"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(value: string) => formatShortDate(value)}
-                  tickMargin={8}
-                  interval={3}
-                />
+                <XAxis {...sharedTimeAxisProps} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
@@ -359,33 +342,26 @@ export function WindTab({
 
       {showGusts ? (
         <>
-          {/* Wind Gust Backtest */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Wind className="h-5 w-5 text-slate-500" />
-                  Vindstød backtest - Sidste 7 dage
+                  Vindstød backtest - sidste 7 dage
                 </CardTitle>
-                <div className="flex items-center gap-4 text-sm text-slate-500">
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]"></span> Faktisk</span>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]" /> Faktisk</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={timelineData.filter(d => d.actualGust !== null || d.dmiGustHistory !== null || d.mlGustHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ComposedChart data={timelineData.filter((d) => d.actualGust !== null || d.dmiGustHistory !== null || d.mlGustHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis
-                      dataKey="timeKey"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value: string) => formatShortDate(value)}
-                      tickMargin={8}
-                      interval={5}
-                    />
+                    <XAxis {...sharedTimeAxisProps} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                     <Tooltip content={<CustomTooltip />} />
                     {forecastBoundaryTimestamp ? (
@@ -411,35 +387,28 @@ export function WindTab({
             </CardContent>
           </Card>
 
-          {/* Wind Gust Forecast */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Wind className="h-5 w-5 text-slate-500" />
-                  Vindstød forecast - Næste 48 timer
+                  Vindstød forecast - næste 48 timer
                 </CardTitle>
-                <div className="flex items-center gap-4 text-sm text-slate-500">
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]"></span> DMI</span>
-                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]"></span> ML</span>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
+                  <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-                Faktisk data kan først vises når tiden er gået — her ser du vores prognoser for fremtiden.
+                Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
               </p>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={timelineData.filter(d => d.dmiGustForecast !== null || d.mlGustForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ComposedChart data={timelineData.filter((d) => d.dmiGustForecast !== null || d.mlGustForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
-                    <XAxis
-                      dataKey="timeKey"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value: string) => formatShortDate(value)}
-                      tickMargin={8}
-                      interval={3}
-                    />
+                    <XAxis {...sharedTimeAxisProps} />
                     <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => Number(value).toFixed(1)} />
                     <Tooltip content={<CustomTooltip />} />
                     {showDmi ? (

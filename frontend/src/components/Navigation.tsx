@@ -104,16 +104,44 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
             <p className="text-xs text-slate-500 dark:text-slate-400">Sidst opdateret</p>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{updatedText}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            aria-label={resolvedTheme === "dark" ? "Skift til lyst tema" : "Skift til mørkt tema"}
+            title={resolvedTheme === "dark" ? "Skift til lyst tema" : "Skift til mørkt tema"}
+          >
             {resolvedTheme === "dark" ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleShare} className="hidden sm:inline-flex">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleShare}
+            className="hidden sm:inline-flex"
+            aria-label="Del side"
+            title="Del side"
+          >
             <Share2 className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isRefreshing} className="hidden sm:inline-flex">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="hidden sm:inline-flex"
+            aria-label="Opdater data"
+            title="Opdater data"
+          >
             <RefreshCw className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen((value) => !value)} className="md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen((value) => !value)}
+            className="md:hidden"
+            aria-label={mobileMenuOpen ? "Luk menu" : "Åbn menu"}
+            title={mobileMenuOpen ? "Luk menu" : "Åbn menu"}
+          >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>

@@ -26,8 +26,8 @@ export function PageIntro({
   return (
     <section className="space-y-4">
       <SeoBreadcrumbs items={breadcrumbs} />
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-        <Card className="border-slate-200 dark:border-slate-800">
+      <div className="grid gap-4 lg:items-start lg:grid-cols-[1.25fr_0.75fr]">
+        <Card className="self-start border-slate-200 dark:border-slate-800">
           <CardHeader>
             <CardTitle className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 md:text-4xl">
               <h1>{title}</h1>
@@ -41,7 +41,7 @@ export function PageIntro({
         </Card>
 
         {relatedLinks.length > 0 ? (
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="self-start border-slate-200 dark:border-slate-800">
             <CardHeader>
               <CardTitle>Fortsæt til</CardTitle>
             </CardHeader>
