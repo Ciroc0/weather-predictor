@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/dashboard",
-      "destination": "/api/dashboard.cjs"
+      "destination": "/api/dashboard.js"
     },
     {
       "source": "/temperatur",

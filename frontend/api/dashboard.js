@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     console.log("[Dashboard] Fetching weather data...");
 
     const frontendSnapshot = await fetchPublishedFrontendSnapshot();
-    if (frontendSnapshot?.current && frontendSnapshot?.forecast && frontendSnapshot?.history) {
+    if (frontendSnapshot?.current && frontendSnapshot?.forecast?.length > 0 && frontendSnapshot?.history) {
       return res.status(200).json({
         snapshot: frontendSnapshot,
         stale: false,
@@ -128,16 +128,37 @@ export default async function handler(req, res) {
       });
     }
     
+    // If we have history from snapshot but no forecast, use snapshot history and try to build forecast from HF API
+    if (frontendSnapshot?.history?.temperature?.length > 0) {
+      console.log("[Dashboard] Using history from frontend snapshot, fetching forecast from HF API...");
+    }
+    
     // Fetch forecast data, history snapshot, and weather data in parallel
-    const [predRows, historySnapshot, weatherRows] = await Promise.all([
-      fetchFromHFAPI(HF_DATASET_PREDICTIONS, 100),
-      fetchHistorySnapshot(),
-      fetchFromHFAPI(HF_DATASET_WEATHER, 100).catch(() => []), // Weather data is optional
-    ]);
+    let predRows = [];
+    let historySnapshot = null;
+    let weatherRows = [];
+    
+    try {
+      [predRows, historySnapshot, weatherRows] = await Promise.all([
+        fetchFromHFAPI(HF_DATASET_PREDICTIONS, 100),
+        fetchHistorySnapshot(),
+        fetchFromHFAPI(HF_DATASET_WEATHER, 100).catch(() => []), // Weather data is optional
+      ]);
+    } catch (error) {
+      console.log(`[Dashboard] HF API fetch failed: ${error.message}`);
+      // If we have snapshot data, use it as fallback
+      if (frontendSnapshot?.history) {
+        console.log("[Dashboard] Falling back to frontend snapshot data");
+        historySnapshot = frontendSnapshot;
+      } else {
+        throw error; // Re-throw if we have no fallback
+      }
+    }
     
     console.log(`[Dashboard] Fetched ${predRows.length} predictions, ${historySnapshot?.history?.temperature?.length || 0} history entries`);
     
-    if (predRows.length === 0) {
+    // If we have no predictions from API but have snapshot with current, use empty forecast
+    if (predRows.length === 0 && !frontendSnapshot?.current) {
       throw new Error("No prediction data available");
     }
     
@@ -234,41 +255,92 @@ export default async function handler(req, res) {
       });
     }
     
-    // Build current weather
-    const latestRow = sortedPreds.filter(p => new Date(p.timestamp || p.target_timestamp) <= now).pop() || sortedPreds[0];
-    
-    const currentMlTemp = latestRow.ml_temp ?? latestRow.ml_pred ?? null;
-    const hasCurrentMl = currentMlTemp !== null && !isNaN(currentMlTemp);
-    const currentDmiTemp = latestRow.dmi_temperature_2m_pred ?? latestRow.dmi_temp_pred ?? null;
-    
-    const current = {
-      temp: hasCurrentMl ? currentMlTemp : currentDmiTemp,
-      dmiTemp: currentDmiTemp,
-      mlTemp: hasCurrentMl ? currentMlTemp : null,
-      tempSource: hasCurrentMl ? "ml" : "dmi",
-      apparentTemp: latestRow.dmi_apparent_temperature_pred ?? null,
-      windSpeed: latestRow.dmi_windspeed_10m_pred ?? latestRow.dmi_wind_pred ?? null,
-      dmiWindSpeed: latestRow.dmi_windspeed_10m_pred ?? latestRow.dmi_wind_pred ?? null,
-      mlWindSpeed: latestRow.ml_wind_speed ?? null,
-      windSpeedSource: latestRow.ml_wind_speed ? "ml" : "dmi",
-      windGust: latestRow.dmi_windgusts_10m_pred ?? null,
-      dmiWindGust: latestRow.dmi_windgusts_10m_pred ?? null,
-      mlWindGust: latestRow.ml_wind_gust ?? null,
-      windGustSource: latestRow.ml_wind_gust ? "ml" : "dmi",
-      windDirection: latestRow.dmi_winddirection_10m_pred ?? null,
-      rainProb: latestRow.ml_rain_prob ?? latestRow.dmi_precipitation_probability_pred ?? 0,
-      dmiRainProb: latestRow.dmi_precipitation_probability_pred ?? 0,
-      mlRainProb: latestRow.ml_rain_prob ?? 0,
-      rainProbSource: latestRow.ml_rain_prob ? "ml" : "dmi",
-      rainAmount: latestRow.ml_rain_amount ?? latestRow.dmi_precipitation_pred ?? 0,
-      dmiRainAmount: latestRow.dmi_precipitation_pred ?? 0,
-      mlRainAmount: latestRow.ml_rain_amount ?? 0,
-      rainAmountSource: latestRow.ml_rain_amount ? "ml" : "dmi",
-      humidity: latestRow.dmi_relative_humidity_2m_pred ?? latestRow.dmi_humidity_pred ?? null,
-      pressure: latestRow.dmi_pressure_msl_pred ?? latestRow.dmi_pressure_pred ?? null,
-      cloudCover: latestRow.dmi_cloud_cover_pred ?? null,
-      weatherCode: latestRow.dmi_weather_code_pred ?? null,
-    };
+    // Build current weather - use snapshot current if available, otherwise build from predictions
+    let current;
+    if (frontendSnapshot?.current?.temp !== null && frontendSnapshot?.current?.temp !== undefined && predRows.length === 0) {
+      // Use current from frontend snapshot when we have no fresh predictions and it has valid temp data
+      current = frontendSnapshot.current;
+      console.log("[Dashboard] Using current weather from frontend snapshot");
+    } else if (sortedPreds.length > 0) {
+      // Build current from latest prediction row
+      const latestRow = sortedPreds.filter(p => new Date(p.timestamp || p.target_timestamp) <= now).pop() || sortedPreds[0];
+      
+      const currentMlTemp = latestRow.ml_temp ?? latestRow.ml_pred ?? null;
+      const hasCurrentMl = currentMlTemp !== null && !isNaN(currentMlTemp);
+      const currentDmiTemp = latestRow.dmi_temperature_2m_pred ?? latestRow.dmi_temp_pred ?? null;
+      
+      current = {
+        temp: hasCurrentMl ? currentMlTemp : currentDmiTemp,
+        dmiTemp: currentDmiTemp,
+        mlTemp: hasCurrentMl ? currentMlTemp : null,
+        tempSource: hasCurrentMl ? "ml" : "dmi",
+        apparentTemp: latestRow.dmi_apparent_temperature_pred ?? null,
+        windSpeed: latestRow.dmi_windspeed_10m_pred ?? latestRow.dmi_wind_pred ?? null,
+        dmiWindSpeed: latestRow.dmi_windspeed_10m_pred ?? latestRow.dmi_wind_pred ?? null,
+        mlWindSpeed: latestRow.ml_wind_speed ?? null,
+        windSpeedSource: latestRow.ml_wind_speed ? "ml" : "dmi",
+        windGust: latestRow.dmi_windgusts_10m_pred ?? null,
+        dmiWindGust: latestRow.dmi_windgusts_10m_pred ?? null,
+        mlWindGust: latestRow.ml_wind_gust ?? null,
+        windGustSource: latestRow.ml_wind_gust ? "ml" : "dmi",
+        windDirection: latestRow.dmi_winddirection_10m_pred ?? null,
+        rainProb: latestRow.ml_rain_prob ?? latestRow.dmi_precipitation_probability_pred ?? 0,
+        dmiRainProb: latestRow.dmi_precipitation_probability_pred ?? 0,
+        mlRainProb: latestRow.ml_rain_prob ?? 0,
+        rainProbSource: latestRow.ml_rain_prob ? "ml" : "dmi",
+        rainAmount: latestRow.ml_rain_amount ?? latestRow.dmi_precipitation_pred ?? 0,
+        dmiRainAmount: latestRow.dmi_precipitation_pred ?? 0,
+        mlRainAmount: latestRow.ml_rain_amount ?? 0,
+        rainAmountSource: latestRow.ml_rain_amount ? "ml" : "dmi",
+        humidity: latestRow.dmi_relative_humidity_2m_pred ?? latestRow.dmi_humidity_pred ?? null,
+        pressure: latestRow.dmi_pressure_msl_pred ?? latestRow.dmi_pressure_pred ?? null,
+        cloudCover: latestRow.dmi_cloud_cover_pred ?? null,
+        weatherCode: latestRow.dmi_weather_code_pred ?? null,
+      };
+    } else if (historySnapshot?.history?.temperature?.length > 0) {
+      // Build current from latest history entry
+      const latestHistory = historySnapshot.history.temperature[historySnapshot.history.temperature.length - 1];
+      console.log("[Dashboard] Building current from latest history entry:", latestHistory.timestamp);
+      current = {
+        temp: latestHistory.mlTemp ?? latestHistory.actualTemp ?? null,
+        dmiTemp: latestHistory.dmiTemp ?? null,
+        mlTemp: latestHistory.mlTemp ?? null,
+        tempSource: latestHistory.mlTemp ? "ml" : "dmi",
+        apparentTemp: null,
+        windSpeed: null,
+        dmiWindSpeed: null,
+        mlWindSpeed: null,
+        windSpeedSource: "dmi",
+        windGust: null,
+        dmiWindGust: null,
+        mlWindGust: null,
+        windGustSource: "dmi",
+        windDirection: null,
+        rainProb: 0,
+        dmiRainProb: 0,
+        mlRainProb: 0,
+        rainProbSource: "dmi",
+        rainAmount: 0,
+        dmiRainAmount: 0,
+        mlRainAmount: 0,
+        rainAmountSource: "dmi",
+        humidity: null,
+        pressure: null,
+        cloudCover: null,
+        weatherCode: null,
+      };
+    } else {
+      // Fallback to empty current if we have no data at all
+      current = {
+        temp: null, dmiTemp: null, mlTemp: null, tempSource: "dmi",
+        apparentTemp: null, windSpeed: null, dmiWindSpeed: null, mlWindSpeed: null,
+        windSpeedSource: "dmi", windGust: null, dmiWindGust: null, mlWindGust: null,
+        windGustSource: "dmi", windDirection: null, rainProb: 0, dmiRainProb: 0,
+        mlRainProb: 0, rainProbSource: "dmi", rainAmount: 0, dmiRainAmount: 0,
+        mlRainAmount: 0, rainAmountSource: "dmi", humidity: null, pressure: null,
+        cloudCover: null, weatherCode: null,
+      };
+    }
     
     // Use history from snapshot (generated by Python with ML backtest)
     const history = historySnapshot?.history || { temperature: [], wind: [], rain: [] };
@@ -365,7 +437,11 @@ export default async function handler(req, res) {
         targets: ["temperature", "wind_speed", "wind_gust", "rain_event", "rain_amount"],
         registryGeneratedAt: null,
       },
-      alerts: [],
+      alerts: predRows.length === 0 ? [{
+        type: "warning",
+        title: "Ingen forecast-data",
+        message: "Kunne ikke hente prognosedata fra Hugging Face. Viser seneste kendte data."
+      }] : [],
     };
     
     console.log("[Dashboard] Success - forecast:", forecast.length, "hours");
