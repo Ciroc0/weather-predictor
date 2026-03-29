@@ -298,32 +298,37 @@ export default async function handler(req, res) {
         weatherCode: latestRow.dmi_weather_code_pred ?? null,
       };
     } else if (historySnapshot?.history?.temperature?.length > 0) {
-      // Build current from latest history entry
-      const latestHistory = historySnapshot.history.temperature[historySnapshot.history.temperature.length - 1];
-      console.log("[Dashboard] Building current from latest history entry:", latestHistory.timestamp);
+      // Build current from latest history entries across all data types
+      const latestTemp = historySnapshot.history.temperature[historySnapshot.history.temperature.length - 1];
+      const latestWind = historySnapshot.history.wind?.[historySnapshot.history.wind.length - 1];
+      const latestRain = historySnapshot.history.rain?.[historySnapshot.history.rain.length - 1];
+      
+      console.log("[Dashboard] Building current from history entries - temp:", latestTemp.timestamp, 
+                  "wind:", latestWind?.timestamp, "rain:", latestRain?.timestamp);
+      
       current = {
-        temp: latestHistory.mlTemp ?? latestHistory.actualTemp ?? null,
-        dmiTemp: latestHistory.dmiTemp ?? null,
-        mlTemp: latestHistory.mlTemp ?? null,
-        tempSource: latestHistory.mlTemp ? "ml" : "dmi",
+        temp: latestTemp.mlTemp ?? latestTemp.actual ?? null,
+        dmiTemp: latestTemp.dmiTemp ?? null,
+        mlTemp: latestTemp.mlTemp ?? null,
+        tempSource: latestTemp.mlTemp ? "ml" : "dmi",
         apparentTemp: null,
-        windSpeed: null,
-        dmiWindSpeed: null,
-        mlWindSpeed: null,
-        windSpeedSource: "dmi",
-        windGust: null,
-        dmiWindGust: null,
-        mlWindGust: null,
-        windGustSource: "dmi",
+        windSpeed: latestWind?.mlWindSpeed ?? latestWind?.actualWindSpeed ?? null,
+        dmiWindSpeed: latestWind?.dmiWindSpeed ?? null,
+        mlWindSpeed: latestWind?.mlWindSpeed ?? null,
+        windSpeedSource: latestWind?.mlWindSpeed ? "ml" : "dmi",
+        windGust: latestWind?.mlWindGust ?? latestWind?.actualWindGust ?? null,
+        dmiWindGust: latestWind?.dmiWindGust ?? null,
+        mlWindGust: latestWind?.mlWindGust ?? null,
+        windGustSource: latestWind?.mlWindGust ? "ml" : "dmi",
         windDirection: null,
-        rainProb: 0,
-        dmiRainProb: 0,
-        mlRainProb: 0,
-        rainProbSource: "dmi",
-        rainAmount: 0,
-        dmiRainAmount: 0,
-        mlRainAmount: 0,
-        rainAmountSource: "dmi",
+        rainProb: latestRain?.mlRainProb ?? latestRain?.dmiRainProb ?? 0,
+        dmiRainProb: latestRain?.dmiRainProb ?? 0,
+        mlRainProb: latestRain?.mlRainProb ?? 0,
+        rainProbSource: latestRain?.mlRainProb ? "ml" : "dmi",
+        rainAmount: latestRain?.mlRainAmount ?? latestRain?.dmiRainAmount ?? 0,
+        dmiRainAmount: latestRain?.dmiRainAmount ?? 0,
+        mlRainAmount: latestRain?.mlRainAmount ?? 0,
+        rainAmountSource: latestRain?.mlRainAmount ? "ml" : "dmi",
         humidity: null,
         pressure: null,
         cloudCover: null,
