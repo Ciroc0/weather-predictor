@@ -2,11 +2,11 @@
 
 > Lokale ML-forbedrede vejrprognoser for Aarhus baseret på DMI HARMONIE data
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-aarhus--vejr.vercel.app-4F46E5?style=flat-square&logo=vercel)](https://aarhus-vejr.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-vqpon.dk-4F46E5?style=flat-square&logo=vercel)](https://www.vqpon.dk)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)](LICENSE)
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Spaces-yellow?style=flat-square)](https://huggingface.co/ciroc0)
 
-[🇩🇰 **Se live demo**](https://aarhus-vejr.vercel.app) · [📊 Dashboard](https://huggingface.co/spaces/ciroc0/dmi-vs-ml-dashboard) · [📖 Dokumentation](docs/)
+[🇩🇰 **Se live demo**](https://www.vqpon.dk) · [📊 Dashboard](https://huggingface.co/spaces/ciroc0/dmi-vs-ml-dashboard) · [📖 Dokumentation](docs/)
 
 ---
 
