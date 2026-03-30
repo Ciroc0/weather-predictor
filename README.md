@@ -1,171 +1,131 @@
-# Weather Predictor / Aarhus Vejr
+# 🌤️ Aarhus Vejr / Weather Predictor
 
-`weather-predictor` er et Aarhus-fokuseret vejrprodukt, der kombinerer Open-Meteos DMI HARMONIE-prognoser med lokale ML-korrektioner for temperatur, vind og regn. Projektet vedligeholdes af `Ciroc0`.
+> Lokale ML-forbedrede vejrprognoser for Aarhus baseret på DMI HARMONIE data
 
-## Hvad repoet indeholder
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-aarhus--vejr.vercel.app-4F46E5?style=flat-square&logo=vercel)](https://aarhus-vejr.vercel.app)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square)](LICENSE)
+[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Spaces-yellow?style=flat-square)](https://huggingface.co/ciroc0)
 
-Dette root-repo er den samlede arbejdsmappe for hele systemet:
+[🇩🇰 **Se live demo**](https://aarhus-vejr.vercel.app) · [📊 Dashboard](https://huggingface.co/spaces/ciroc0/dmi-vs-ml-dashboard) · [📖 Dokumentation](docs/)
 
-| Del | Placering | Rolle |
-| --- | --- | --- |
-| Vercel-frontend | `frontend/` | Public webapp, som viser forecast, historik og modelperformance |
-| Collector Space | `hf/spaces/dmi-collector/` | Henter forecast- og observationsdata, bygger træningsmatrix, genererer predictions og publicerer snapshots |
-| Trainer Space | `hf/spaces/dmi-ml-trainer/` | Træner og deployer bucketed modeller for temperatur, vind og regn |
-| Dashboard Space | `hf/spaces/dmi-vs-ml-dashboard/` | Gradio-dashboard til read-only visualisering og evaluering |
-| Weather dataset | `hf/datasets/dmi-aarhus-weather-data/` | Træningsdata, modelbundles og modelmetadata |
-| Predictions dataset | `hf/datasets/dmi-aarhus-predictions/` | Live predictions, verificerede actuals og frontend-snapshots |
-| Fælles docs | `docs/` | Intern arbejdsdokumentation, driftsoverblik og licensnoter |
+---
 
-Alle Hugging Face mapper under `hf/` er selvstændige git-repos med deres egen historik og push-target.
+<img src="docs/assets/frontend-with-wind.png" alt="Aarhus Vejr Dashboard" width="100%">
 
-## Arkitektur
+## ✨ Features
 
-```text
-Open-Meteo forecast + archive
-            |
-            v
-hf/spaces/dmi-collector
-  - update_daily()
-  - generate_predictions()
-  - verify_predictions()
-  - publish_frontend_snapshot()
-            |
-            +--> hf/datasets/dmi-aarhus-weather-data
-            |      - training_matrix.parquet
-            |      - model_registry.json
-            |      - model_meta.json
-            |      - *_models.pkl
-            |
-            +--> hf/datasets/dmi-aarhus-predictions
-                   - predictions_latest.parquet
-                   - frontend_snapshot.json
-                   - compatibility files
-            |
-            +--> frontend/api/dashboard.js
-            |      - reads frontend_snapshot.json first
-            |      - falls back to HF datasets-server if needed
-            |
-            +--> hf/spaces/dmi-vs-ml-dashboard
+- **🌡️ Temperaturprognoser** – ML-korrigerede temperaturer sammenlignet med DMI's prognoser
+- **💨 Vind og vindstød** – Prognoser for vindhastighed og vindstød i Aarhus
+- **🌧️ Regnforudsigelse** – Sandsynlighed for regn og forventet mængde
+- **📊 Performance-tracking** – Følg ML-modellernes nøjagtighed mod DMI baseline
+- **🏙️ Aarhus-fokuseret** – Specialiseret til Aarhus' lokale mikroklima
 
-hf/spaces/dmi-ml-trainer
-  - retrains weekly
-  - promotes only buckets that beat baseline
+## 🏗️ Arkitektur
+
+```mermaid
+graph TD
+    A[Open-Meteo API<br/>DMI HARMONIE] --> B[Collector Space]
+    B --> C[Weather Dataset]
+    B --> D[Predictions Dataset]
+    C --> E[ML Trainer Space]
+    E --> C
+    D --> F[Vercel Frontend]
+    D --> G[Dashboard Space]
+    
+    style A fill:#e1f5fe
+    style F fill:#e8f5e9
+    style G fill:#fff3e0
 ```
 
-## Drift lige nu
+| Komponent | Placering | Formål |
+|-----------|-----------|--------|
+| 🌐 **Frontend** | [`frontend/`](frontend/) | Vercel-hostet React webapp |
+| 📡 **Collector** | `hf/spaces/dmi-collector/` | Data ingestion & predictions |
+| 🧠 **ML Trainer** | `hf/spaces/dmi-ml-trainer/` | Model træning & deployment |
+| 📊 **Dashboard** | `hf/spaces/dmi-vs-ml-dashboard/` | Visualisering & evaluering |
+| 💾 **Weather Data** | `hf/datasets/dmi-aarhus-weather-data/` | Træningsdata & modeller |
+| 📈 **Predictions** | `hf/datasets/dmi-aarhus-predictions/` | Live predictions & snapshots |
 
-### `hf/spaces/dmi-collector`
+## 🚀 Kom i gang
 
-- Scheduler for predictions: `00:35`, `03:35`, `06:35`, `09:35`, `12:35`, `15:35`, `18:35`, `21:35`
-- Scheduler for verification: hver time `:12`
-- Scheduler for daily update: dagligt `05:45`
-- Startup-catch-up kører automatisk, hvis data eller predictions mangler efter restart
+### Frontend (lokal udvikling)
 
-### `hf/spaces/dmi-ml-trainer`
-
-- Scheduler for retraining: søndag `06:50`
-- Træner op til 20 bucketed modeller: 5 targets x 4 lead buckets
-- Promotion er additiv: eksisterende model beholdes, hvis ny model ikke slår baseline
-
-### `hf/spaces/dmi-vs-ml-dashboard`
-
-- Ingen scheduler
-- Cache TTL: `300` sekunder
-- Læser prediction-fil via `predictions_latest.parquet` og falder tilbage til legacy `predictions.parquet`
-
-### `frontend/`
-
-- Vite + React 19 + TypeScript
-- Deployes som Vercel-frontend med serverless endpoint i `frontend/api/dashboard.js`
-- Læser først `frontend_snapshot.json` fra Hugging Face og falder ellers tilbage til dataset-server JSON
-
-## Data og artefakter
-
-### Primære artefakter i `hf/datasets/dmi-aarhus-weather-data`
-
-- `training_matrix.parquet`: source of truth for træningsdata
-- `model_registry.json`: aktive target/bucket-modeller
-- `model_meta.json`: seneste træningsmetadata
-- `temperature_models.pkl`
-- `wind_speed_models.pkl`
-- `wind_gust_models.pkl`
-- `rain_event_models.pkl`
-- `rain_amount_models.pkl`
-
-### Kompatibilitetsartefakter i `hf/datasets/dmi-aarhus-weather-data`
-
-- `data.parquet`: legacy fallback, stadig læsbar i kode af kompatibilitetshensyn
-- `xgb_model.pkl`: legacy single-target temperaturmodel, ikke source of truth i den nuværende multi-target pipeline
-
-### Primære artefakter i `hf/datasets/dmi-aarhus-predictions`
-
-- `predictions_latest.parquet`: nuværende future + verified prediction-store
-- `frontend_snapshot.json`: primær kontrakt til Vercel-frontenden
-
-### Kompatibilitetsartefakter i `hf/datasets/dmi-aarhus-predictions`
-
-- `predictions.parquet`: legacy fallback
-- `history_snapshot.json`: legacy fallback læst af ældre frontend-fallbackkode; ikke den primære public kontrakt længere
-
-## Modeller
-
-Aktuelle targettyper i koden:
-
-- `temperature`: `XGBRegressor` som korrektionsmodel oven på DMI forecast
-- `wind_speed`: `XGBRegressor` som korrektionsmodel
-- `wind_gust`: `XGBRegressor` som korrektionsmodel
-- `rain_event`: `XGBClassifier` for sandsynlighed for regn
-- `rain_amount`: `XGBRegressor` for mængde, kun hvor regn er relevant
-
-Lead buckets:
-
-- `1-6`
-- `7-12`
-- `13-24`
-- `25-48`
-
-## Lokal udvikling
-
-### Frontend
-
-```powershell
-cd .\frontend
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-### Status på Hugging Face repos
+Frontenden kører på `http://localhost:5173` og kommunikerer med Hugging Face datasets.
 
-Se [docs/hf-git-commands.md](/d:/Dev/Active/weather-predictor/docs/hf-git-commands.md) for præcise PowerShell-kommandoer til hver Space og hvert dataset.
+### Hugging Face Spaces
 
-### Vigtige dokumenter
+Alle Spaces under `hf/` er separate git repositories med egen deployment. Se [`docs/hf-git-commands.md`](docs/hf-git-commands.md) for kommandoer.
 
-- [docs/system-context.md](/d:/Dev/Active/weather-predictor/docs/system-context.md): intern arkitektur og source-of-truth for runtime-adfærd
-- [docs/licensing.md](/d:/Dev/Active/weather-predictor/docs/licensing.md): licensmodel, covered paths og attribution-krav
-- [docs/PLAN.md](/d:/Dev/Active/weather-predictor/docs/PLAN.md): aktuel status og næste oprydnings-/produktspor
+## 🔄 Drift & Schedulers
 
-## Licens og attribution
+| Space | Scheduler | Formål |
+|-------|-----------|--------|
+| Collector | `00:35, 03:35, 06:35, 09:35, 12:35, 15:35, 18:35, 21:35` | Nye predictions |
+| Collector | Hver time `:12` | Verifikation af gamle predictions |
+| Collector | Dagligt `05:45` | Træningsdata opdatering |
+| ML Trainer | Søndag `06:50` | Gen-træning af modeller |
 
-Projektet bruger en bevidst multi-license-model:
+## 🧠 Modeller
 
-- Kode i root-repoet, `frontend/`, `scripts/` og Hugging Face Spaces er under `Apache-2.0`
-- Dokumentation, README-filer, datasets, modelartefakter og public snapshots er under `CC BY 4.0`
+Projektet bruger **XGBoost** med en multi-target, bucketed tilgang:
 
-Praktisk konsekvens:
+| Target | Type | Beskrivelse |
+|--------|------|-------------|
+| `temperature` | Regression | Korrektionsmodel oven på DMI forecast |
+| `wind_speed` | Regression | Korrektionsmodel |
+| `wind_gust` | Regression | Korrektionsmodel |
+| `rain_event` | Klassifikation | Sandsynlighed for regn |
+| `rain_amount` | Regression | Mængde (kun hvor regn er relevant) |
 
-- Folk må gerne bruge, ændre og redistribuere projektet
-- Attribution til projektets ophavsangivelse skal bevares
-- `NOTICE`-filen i roden skal bevares ved redistribuering af koden
+Lead buckets: `1-6`, `7-12`, `13-24`, `25-48` timer
 
-Se den fulde model i [docs/licensing.md](/d:/Dev/Active/weather-predictor/docs/licensing.md).
+## 📁 Projektstruktur
 
-## Datakilder og tredjepartsforhold
+```
+weather-predictor/
+├── frontend/           # Vite + React 19 + TypeScript
+├── docs/              # Dokumentation
+│   ├── system-context.md    # Arkitektur & drift
+│   ├── licensing.md         # Licensdetaljer
+│   └── hf-git-commands.md   # HF workflow
+├── scripts/           # Hjælpe-scripts
+└── hf/               # Hugging Face repos
+    ├── spaces/
+    │   ├── dmi-collector/
+    │   ├── dmi-ml-trainer/
+    │   └── dmi-vs-ml-dashboard/
+    └── datasets/
+        ├── dmi-aarhus-weather-data/
+        └── dmi-aarhus-predictions/
+```
 
-- Forecasts og observationer hentes via Open-Meteo
-- Forecast-grundlaget er Open-Meteos adgang til DMI HARMONIE
-- DMI og Open-Meteo skal krediteres i redistribueringer af data og snapshots
+## 📜 Licens
 
-Vigtigt:
+Dette projekt bruger en **dual-license** model:
 
-- DMI angiver generelt frie data under `CC BY 4.0`, men ikke alt materiale på dmi.dk er frit genbrugeligt
-- Open-Meteos open-access side angiver pr. 12. marts 2026, at gratis/open access ikke er til kommerciel brug
+- **Kode** (`frontend/`, `scripts/`, `hf/spaces/`): [Apache-2.0](LICENSE)
+- **Dokumentation & Data** (`README.md`, `docs/`, `hf/datasets/`): [CC BY 4.0](docs/licensing.md)
+
+> **Attribution:** *Weather Predictor / Aarhus Vejr by Ciroc0*  
+> **Datakilder:** Uses weather data delivered via Open-Meteo · Forecast source based on DMI HARMONIE
+
+Se [docs/licensing.md](docs/licensing.md) for fulde detaljer.
+
+## 🙏 Acknowledgments
+
+- [Open-Meteo](https://open-meteo.com/) – Gratis vejrdata API
+- [DMI](https://www.dmi.dk/) – Dansk Meteorologisk Institut
+- [Hugging Face](https://huggingface.co/) – Hosting af Spaces og Datasets
+- [Vercel](https://vercel.com/) – Frontend hosting
+
+---
+
+<p align="center">
+  <sub>Bygget med ❤️ i Aarhus af <a href="https://github.com/ciroc0">Ciroc0</a></sub>
+</p>
