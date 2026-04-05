@@ -2,8 +2,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Info, Thermometer, TrendingDown } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  ComposedChart,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -48,6 +49,15 @@ interface TooltipPayloadItem {
   name: string;
   value: number;
 }
+
+// Chart colors matching the design
+const COLORS = {
+  ml: "#3b82f6",
+  dmi: "#f97316",
+  actual: "#10b981",
+  apparent: "#f59e0b",
+  grid: "#334155",
+};
 
 export function TemperatureTab({
   forecast,
@@ -112,13 +122,13 @@ export function TemperatureTab({
     }
 
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <p className="mb-2 font-medium">{formatTooltipDateTime(label)}</p>
+      <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-3 shadow-xl">
+        <p className="mb-2 font-medium text-dashboard-text">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-slate-600 dark:text-slate-400">{entry.name}:</span>
-            <span className="font-semibold">{entry.value.toFixed(1)}°C</span>
+            <span className="text-dashboard-text-muted">{entry.name}:</span>
+            <span className="font-semibold text-dashboard-text">{entry.value?.toFixed?.(1) || entry.value}°C</span>
           </div>
         ))}
       </div>
@@ -127,24 +137,29 @@ export function TemperatureTab({
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <Card className="border-slate-200 dark:border-slate-800">
+      {/* Status Card */}
+      <Card className="dashboard-card-flat">
         <CardContent className="space-y-3 p-6">
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant={targetStatus.hasActiveModel ? "default" : "secondary"}>
+            <Badge 
+              variant={targetStatus.hasActiveModel ? "default" : "secondary"}
+              className={targetStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
+            >
               {targetStatus.statusLabel}
             </Badge>
-            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed">
+            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed border-dashboard-border text-dashboard-text-muted">
               {explanations.forecast}
             </Badge>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{targetStatus.statusDescription}</p>
+          <p className="text-sm text-dashboard-text-muted">{targetStatus.statusDescription}</p>
         </CardContent>
       </Card>
 
+      {/* Stats and Help */}
       <div className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex max-w-full items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+            <div className="flex max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-dashboard-ml to-dashboard-ml/70 px-4 py-2 text-sm font-semibold text-white shadow-lg">
               <TrendingDown className="h-4 w-4 shrink-0" />
               <span className="whitespace-normal leading-relaxed">
                 {improvement !== null
@@ -152,10 +167,10 @@ export function TemperatureTab({
                   : "Temperaturmodellen evalueres løbende"}
               </span>
             </div>
-            <Badge variant="secondary" className="max-w-full whitespace-normal text-left leading-relaxed">
+            <Badge variant="secondary" className="max-w-full whitespace-normal text-left leading-relaxed bg-dashboard-border text-dashboard-text">
               {avgDiff !== null ? `Typisk forskel: ${avgDiff.toFixed(2)}°C` : "Ingen aktiv ML-forskel endnu"}
             </Badge>
-            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed">
+            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed border-dashboard-border text-dashboard-text-muted">
               {maxDiff !== null ? `Største forskel: ${maxDiff.toFixed(1)}°C` : "Ingen største forskel endnu"}
             </Badge>
           </div>
@@ -163,24 +178,24 @@ export function TemperatureTab({
             type="button"
             variant="outline"
             size="sm"
-            className="w-full justify-start sm:w-auto"
+            className="w-full justify-start sm:w-auto border-dashboard-border text-dashboard-text hover:bg-dashboard-card"
             onClick={() => setShowChartHelp((value) => !value)}
             aria-expanded={showChartHelp}
             aria-controls="temperature-chart-help"
           >
-            <Info className="h-4 w-4" />
+            <Info className="h-4 w-4 mr-2" />
             {showChartHelp ? "Skjul guide til grafer" : "Sådan læser du grafen"}
           </Button>
         </div>
         {showChartHelp ? (
-          <Card id="temperature-chart-help" className="border-dashed border-slate-300 dark:border-slate-700">
-            <CardContent className="space-y-3 p-4 text-sm text-slate-600 dark:text-slate-400">
+          <Card id="temperature-chart-help" className="border-dashed border-dashboard-border bg-dashboard-card">
+            <CardContent className="space-y-3 p-4 text-sm text-dashboard-text-muted">
               <div>
-                <p className="font-medium text-slate-900 dark:text-slate-100">Backtest (historik)</p>
+                <p className="font-medium text-dashboard-text">Backtest (historik)</p>
                 <p>Blå streg = faktisk målt temperatur. Turkis og orange viser DMI og ML for samme tidspunkt.</p>
               </div>
               <div>
-                <p className="font-medium text-slate-900 dark:text-slate-100">Forecast (fremtid)</p>
+                <p className="font-medium text-dashboard-text">Forecast (fremtid)</p>
                 <p>Turkis linje = DMI-prognose. Orange linje = ML-justeret prognose. Gul viser følt temperatur.</p>
               </div>
             </CardContent>
@@ -188,154 +203,214 @@ export function TemperatureTab({
         ) : null}
       </div>
 
-      <Card>
+      {/* Backtest Chart */}
+      <Card className="dashboard-card-flat">
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Thermometer className="h-5 w-5 text-slate-500" />
-              Temperaturbacktest - sidste 7 dage
+            <CardTitle className="flex items-center gap-2 text-dashboard-text">
+              <Thermometer className="h-5 w-5 text-dashboard-text-muted" />
+              Temperatur backtest - sidste 7 dage
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#0B2EF4]" /> Faktisk</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI Data</span>
+              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML Prognose</span>
+              <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk Data</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
+              <AreaChart
                 data={timelineData.filter((d) => d.actual !== null || d.dmiHistory !== null || d.mlHistory !== null)}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <defs>
+                  <linearGradient id="mlBacktestGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="dmiBacktestGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#94a3b8' }} 
+                  tickFormatter={(value) => `${value}°`} 
+                  domain={["dataMin - 2", "dataMax + 2"]}
+                  stroke={COLORS.grid}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
                   <ReferenceLine
                     x={forecastBoundaryTimestamp}
                     stroke="#475569"
                     strokeWidth={2}
-                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#475569", fontWeight: 600 }}
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
                   />
                 ) : null}
                 {showDmi ? (
-                  <Line type="monotone" dataKey="dmiHistory" name="DMI-backtest" stroke="#27D6F5" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="dmiHistory" 
+                    name="DMI-backtest" 
+                    stroke={COLORS.dmi} 
+                    strokeWidth={2}
+                    fill="url(#dmiBacktestGradient)"
+                    dot={{ r: 2, fill: COLORS.dmi }}
+                  />
                 ) : null}
                 {showMl && hasMlSeries ? (
-                  <Line type="monotone" dataKey="mlHistory" name="ML-backtest" stroke="#F54927" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="mlHistory" 
+                    name="ML-backtest" 
+                    stroke={COLORS.ml} 
+                    strokeWidth={2}
+                    fill="url(#mlBacktestGradient)"
+                    dot={{ r: 2, fill: COLORS.ml }}
+                  />
                 ) : null}
                 {hasHistory ? (
-                  <Line type="monotone" dataKey="actual" name="Faktisk temperatur" stroke="#0B2EF4" strokeWidth={3} dot={false} strokeOpacity={0.9} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="actual" 
+                    name="Faktisk temperatur" 
+                    stroke={COLORS.actual} 
+                    strokeWidth={2}
+                    fill="transparent"
+                    dot={{ r: 2, fill: COLORS.actual }}
+                  />
                 ) : null}
-              </ComposedChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-sm text-dashboard-text-muted">
             Sammenligning af DMI&apos;s prognose, ML-modellen og den faktisk målte temperatur i de seneste 7 dage.
           </p>
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Forecast Chart */}
+      <Card className="dashboard-card-flat">
         <CardHeader className="pb-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Thermometer className="h-5 w-5 text-slate-500" />
+            <CardTitle className="flex items-center gap-2 text-dashboard-text">
+              <Thermometer className="h-5 w-5 text-dashboard-text-muted" />
               Temperaturprognose - næste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#27D6F5]" /> DMI</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-[#F54927]" /> ML</span>
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-amber-500" /> Føles som</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI Data</span>
+              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML Prognose</span>
+              <span className="legend-item"><span className="legend-dot bg-amber-500" /> Føles som</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mb-3 text-sm text-dashboard-text-muted">
             Faktiske data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
+              <AreaChart
                 data={timelineData.filter((d) => d.dmiForecast !== null || d.mlForecast !== null)}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-700" />
+                <defs>
+                  <linearGradient id="mlForecastGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="dmiForecastGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `${value}°`} domain={["dataMin - 2", "dataMax + 2"]} />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#94a3b8' }} 
+                  tickFormatter={(value) => `${value}°`} 
+                  domain={["dataMin - 2", "dataMax + 2"]}
+                  stroke={COLORS.grid}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="dmiForecast"
                     name="DMI-prognose"
-                    stroke="#27D6F5"
-                    strokeWidth={3}
-                    dot={false}
-                    strokeOpacity={0.9}
+                    stroke={COLORS.dmi}
+                    strokeWidth={2}
+                    fill="url(#dmiForecastGradient)"
+                    dot={{ r: 2, fill: COLORS.dmi }}
                   />
                 ) : null}
                 {showMl && hasMlSeries ? (
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="mlForecast"
                     name="ML-prognose"
-                    stroke="#F54927"
-                    strokeWidth={3}
-                    dot={false}
-                    strokeOpacity={0.9}
+                    stroke={COLORS.ml}
+                    strokeWidth={2}
+                    fill="url(#mlForecastGradient)"
+                    dot={{ r: 2, fill: COLORS.ml }}
                   />
                 ) : null}
                 <Line
                   type="monotone"
                   dataKey="apparentForecast"
                   name="Føles som"
-                  stroke="#f59e0b"
-                  strokeWidth={3}
+                  stroke={COLORS.apparent}
+                  strokeWidth={2}
                   strokeDasharray="5 5"
                   dot={false}
-                  strokeOpacity={0.9}
+                  fill="transparent"
                 />
-              </ComposedChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
+      {/* Hourly Cards */}
       <div>
-        <h3 className="mb-4 text-lg font-semibold">Næste 16 timer</h3>
+        <h3 className="mb-4 text-lg font-semibold text-dashboard-text">Næste 16 timer</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {forecast.slice(0, 16).map((hour, index) => (
-            <Card key={hour.timestamp} className={index === 0 ? "border-emerald-500 dark:border-emerald-500" : undefined}>
+            <Card 
+              key={hour.timestamp} 
+              className={`dashboard-card-flat ${index === 0 ? "border-dashboard-ml" : ""}`}
+            >
               <CardContent className="p-3 text-left sm:text-center">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">kl. {formatDanishTime(hour.timestamp)}</p>
+                  <p className="text-xs text-dashboard-text-muted">kl. {formatDanishTime(hour.timestamp)}</p>
                   <Badge
                     variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}
-                    className="max-w-full whitespace-normal text-[10px] leading-relaxed"
+                    className={`max-w-full whitespace-normal text-[10px] leading-relaxed ${hour.effectiveTempSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
                   >
                     {getSourceLabel(hour.effectiveTempSource)}
                   </Badge>
                 </div>
-                <p className="my-1 text-xl font-bold">
+                <p className="my-1 text-xl font-bold text-dashboard-text">
                   {hour.effectiveTemp !== null ? `${Math.round(hour.effectiveTemp)}°` : "—"}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-dashboard-ml">
                   ML {hour.mlTemp !== null ? `${Math.round(hour.mlTemp)}°` : "ikke aktiv"}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-dashboard-dmi">
                   DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "ingen data"}
                 </p>
                 {hour.apparentTemp !== null ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-amber-500">
                     Føles {Math.round(hour.apparentTemp)}°
                   </p>
                 ) : null}
                 {index === 0 ? (
-                  <Badge variant="outline" className="mt-2 border-emerald-500 text-emerald-600">
+                  <Badge variant="outline" className="mt-2 border-dashboard-ml text-dashboard-ml">
                     Nu
                   </Badge>
                 ) : null}

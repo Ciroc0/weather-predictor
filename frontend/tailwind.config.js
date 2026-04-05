@@ -38,16 +38,22 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        // Dashboard specific colors
+        dashboard: {
+          bg: "#1e212b",
+          card: "#2b2f3a",
+          "card-hover": "#353a47",
+          border: "#334155",
+          text: "#e2e8f0",
+          "text-muted": "#94a3b8",
+          ml: "#3b82f6",
+          dmi: "#f97316",
+          actual: "#10b981",
+          grid: "#334155",
         },
+      },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       borderRadius: {
         xl: "calc(var(--radius) + 4px)",
@@ -58,6 +64,8 @@ module.exports = {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        glow: "0 0 20px rgba(59, 130, 246, 0.15)",
+        "glow-orange": "0 0 20px rgba(249, 115, 22, 0.15)",
       },
       keyframes: {
         "accordion-down": {

@@ -55,17 +55,24 @@ function SourceDetails({
   suffix: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
+    <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
-        <Badge variant={source === "ml" ? "default" : "secondary"}>{getSourceLabel(source)}</Badge>
+        <p className="text-sm text-dashboard-text-muted">{title}</p>
+        <Badge 
+          variant={source === "ml" ? "default" : "secondary"}
+          className={source === "ml" ? "bg-dashboard-ml hover:bg-dashboard-ml" : "bg-dashboard-border"}
+        >
+          {getSourceLabel(source)}
+        </Badge>
       </div>
-      <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-        <p>
-          <span className="font-medium">ML:</span> {formatMetric(mlValue, suffix)}
+      <div className="mt-3 space-y-1 text-sm">
+        <p className="flex justify-between">
+          <span className="text-dashboard-text-muted">ML:</span>
+          <span className="font-medium text-dashboard-ml">{formatMetric(mlValue, suffix)}</span>
         </p>
-        <p>
-          <span className="font-medium">DMI:</span> {formatMetric(dmiValue, suffix)}
+        <p className="flex justify-between">
+          <span className="text-dashboard-text-muted">DMI:</span>
+          <span className="font-medium text-dashboard-dmi">{formatMetric(dmiValue, suffix)}</span>
         </p>
       </div>
     </div>
@@ -83,68 +90,77 @@ export function WeatherHero({ current, generatedAt, summaryText, statusText }: W
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-sky-100 via-white to-emerald-50 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900"
+      className="relative overflow-hidden rounded-2xl border border-dashboard-border bg-gradient-to-br from-[#2d3342] via-[#252a36] to-[#1e222d]"
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.12),transparent_40%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.08),transparent_40%)]" />
       <div className="relative px-6 py-8 md:px-10 md:py-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="flex items-center gap-5">
-            <div className="flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-white/80 shadow-lg ring-1 ring-white/80 dark:bg-slate-800/70 dark:ring-slate-700/70 md:h-28 md:w-28">
-              {getWeatherIcon(current.weatherCode, "h-12 w-12 text-slate-700 dark:text-slate-100")}
+            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-b from-[#3d4659] to-[#2b303d] border border-dashboard-border shadow-lg md:h-28 md:w-28">
+              {getWeatherIcon(current.weatherCode, "h-12 w-12 text-yellow-400")}
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Aarhus</p>
+              <p className="text-sm uppercase tracking-[0.25em] text-dashboard-text-muted">Aarhus</p>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-6xl font-semibold tracking-tighter md:text-7xl">{temperature}</span>
-                  <span className="text-2xl text-slate-500 dark:text-slate-400">°C</span>
+                  <span className="text-6xl font-semibold tracking-tighter text-dashboard-text md:text-7xl">{temperature}</span>
+                  <span className="text-2xl text-dashboard-text-muted">°C</span>
                 </div>
-                <Badge variant={current.tempSource === "ml" ? "default" : "secondary"}>
+                <Badge 
+                  variant={current.tempSource === "ml" ? "default" : "secondary"}
+                  className={current.tempSource === "ml" ? "bg-dashboard-ml hover:bg-dashboard-ml" : "bg-dashboard-border"}
+                >
                   {getSourceShortLabel(current.tempSource)}
                 </Badge>
               </div>
-              <p className="mt-2 text-lg text-slate-700 dark:text-slate-300">
+              <p className="mt-2 text-lg text-dashboard-text">
                 {getWeatherDescription(current.weatherCode)}
               </p>
               {apparent && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">Føles som {apparent}</p>
+                <p className="text-sm text-dashboard-text-muted">Føles som {apparent}</p>
               )}
             </div>
           </div>
 
           <div className="space-y-2 text-left md:text-right">
-            <p className="text-sm text-slate-500 dark:text-slate-400">{formatDanishDate(generatedAt)}</p>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+            <p className="text-sm text-dashboard-text-muted">{formatDanishDate(generatedAt)}</p>
+            <p className="text-sm font-medium text-dashboard-text">
               Opdateret {formatDanishTime(generatedAt)}
             </p>
-            <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">{statusText}</p>
+            <p className="max-w-md text-sm text-dashboard-text-muted">{statusText}</p>
           </div>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-[1fr_1fr_1.3fr]">
-          <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-4">
+            <div className="flex items-center gap-2 text-sm text-dashboard-text-muted">
               <Wind className="h-4 w-4" />
               Vind
             </div>
-            <p className="mt-2 text-2xl font-semibold">{wind}</p>
-            <Badge variant={current.windSpeedSource === "ml" ? "default" : "secondary"} className="mt-3">
+            <p className="mt-2 text-2xl font-semibold text-dashboard-text">{wind}</p>
+            <Badge 
+              variant={current.windSpeedSource === "ml" ? "default" : "secondary"}
+              className={`mt-3 ${current.windSpeedSource === "ml" ? "bg-dashboard-ml hover:bg-dashboard-ml" : "bg-dashboard-border"}`}
+            >
               {getSourceLabel(current.windSpeedSource)}
             </Badge>
           </div>
-          <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-4">
+            <div className="flex items-center gap-2 text-sm text-dashboard-text-muted">
               <Droplets className="h-4 w-4" />
               Regnrisiko
             </div>
-            <p className="mt-2 text-2xl font-semibold">{rain}</p>
-            <Badge variant={current.rainProbSource === "ml" ? "default" : "secondary"} className="mt-3">
+            <p className="mt-2 text-2xl font-semibold text-dashboard-text">{rain}</p>
+            <Badge 
+              variant={current.rainProbSource === "ml" ? "default" : "secondary"}
+              className={`mt-3 ${current.rainProbSource === "ml" ? "bg-dashboard-ml hover:bg-dashboard-ml" : "bg-dashboard-border"}`}
+            >
               {getSourceLabel(current.rainProbSource)}
             </Badge>
           </div>
-          <div className="rounded-2xl bg-slate-950 p-4 text-slate-50 ring-1 ring-slate-950 dark:bg-white dark:text-slate-950 dark:ring-slate-100">
-            <p className="text-sm uppercase tracking-wide opacity-70">Hvad betyder det?</p>
-            <p className="mt-2 text-base font-medium">{summaryText}</p>
+          <div className="rounded-xl bg-gradient-to-r from-dashboard-ml/20 to-dashboard-dmi/20 p-4 border border-dashboard-ml/30">
+            <p className="text-sm uppercase tracking-wide text-dashboard-text-muted">Hvad betyder det?</p>
+            <p className="mt-2 text-base font-medium text-dashboard-text">{summaryText}</p>
           </div>
         </div>
 
