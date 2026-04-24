@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cloud, Menu, X, Clock, Settings } from "lucide-react";
+import { Cloud, Menu, X, RefreshCw, Activity } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { formatDanishTime } from "@/lib/weather";
 
 interface NavigationProps {
@@ -21,72 +20,73 @@ const navItems = [
   { href: "/performance", label: "Performance" },
 ];
 
-export function Navigation({ lastUpdated }: NavigationProps) {
+export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const updatedText = lastUpdated ? formatDanishTime(lastUpdated) : "Ingen data";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-dashboard-border bg-[#1e222d]/95 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <Cloud className="h-6 w-6 text-dashboard-text" />
-          <span className="text-lg font-semibold tracking-wide text-dashboard-text">Aarhus Vejr</span>
-        </Link>
+    <header className="fixed top-0 left-0 right-0 z-50">
+      {/* Glass morphism nav bar */}
+      <div className="mx-4 mt-3 rounded-2xl border border-white/[0.08] bg-[#0f172a]/80 backdrop-blur-2xl shadow-lg shadow-black/20">
+        <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-4 sm:px-6">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-white/[0.08] group-hover:border-cyan-500/30 transition-colors">
+              <Cloud className="h-4 w-4 text-cyan-400" />
+              <div className="absolute inset-0 rounded-xl bg-cyan-400/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <span className="text-base font-bold tracking-tight text-white">
+              Aarhus <span className="text-gradient-cyan">Vejr</span>
+            </span>
+          </Link>
 
-        {/* Desktop Navigation - Pill Style */}
-        <nav className="hidden items-center gap-1 rounded-lg bg-[#2b303d] p-1 md:flex">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              end={item.end}
-              to={item.href}
-              className={({ isActive }) =>
-                isActive
-                  ? "rounded-md bg-[#3f4759] px-4 py-1.5 text-sm font-medium text-white transition-all"
-                  : "rounded-md px-4 py-1.5 text-sm font-medium text-dashboard-text-muted transition-all hover:text-white"
-              }
+          {/* Desktop Navigation - Pill Style */}
+          <nav className="hidden items-center gap-1 rounded-xl bg-white/[0.04] p-1 md:flex">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.href}
+                end={item.end}
+                to={item.href}
+                className={({ isActive }) =>
+                  isActive
+                    ? "rounded-lg bg-white/[0.12] px-4 py-1.5 text-sm font-semibold text-white shadow-lg transition-all duration-200"
+                    : "rounded-lg px-4 py-1.5 text-sm font-medium text-aether-text-secondary transition-all duration-200 hover:text-white hover:bg-white/[0.06]"
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-2">
+            <div className="hidden text-right lg:block mr-2">
+              <div className="flex items-center justify-end gap-1.5">
+                <Activity className={`h-3 w-3 ${isStale ? 'text-amber-400' : 'text-emerald-400'}`} />
+                <p className="text-[11px] font-medium text-aether-text-tertiary uppercase tracking-wider">
+                  {isStale ? 'Cache' : 'Live'}
+                </p>
+              </div>
+              <p className="text-xs font-medium text-aether-text-secondary">{updatedText}</p>
+            </div>
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-aether-text-secondary hover:text-white hover:bg-white/[0.08] transition-all disabled:opacity-50"
+              aria-label="Genindlæs data"
+              title="Genindlæs data"
             >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-2">
-          <div className="hidden text-right lg:block">
-            <p className="text-xs text-dashboard-text-muted">Sidst opdateret</p>
-            <p className="text-sm font-medium text-dashboard-text">{updatedText}</p>
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen((value) => !value)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-aether-text-secondary hover:text-white hover:bg-white/[0.08] transition-all md:hidden"
+              aria-label={mobileMenuOpen ? "Luk menu" : "Åbn menu"}
+            >
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-dashboard-text-muted hover:text-white"
-            aria-label="Historie"
-            title="Historie"
-          >
-            <Clock className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-dashboard-text-muted hover:text-white"
-            aria-label="Indstillinger"
-            title="Indstillinger"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen((value) => !value)}
-            className="text-dashboard-text-muted hover:text-white md:hidden"
-            aria-label={mobileMenuOpen ? "Luk menu" : "Åbn menu"}
-            title={mobileMenuOpen ? "Luk menu" : "Åbn menu"}
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
         </div>
       </div>
 
@@ -94,12 +94,13 @@ export function Navigation({ lastUpdated }: NavigationProps) {
       <AnimatePresence>
         {mobileMenuOpen ? (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="border-t border-dashboard-border bg-[#1e222d] md:hidden"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="mx-4 mt-2 rounded-2xl border border-white/[0.08] bg-[#0f172a]/95 backdrop-blur-2xl shadow-xl md:hidden overflow-hidden"
           >
-            <div className="space-y-1 px-4 py-4">
+            <div className="space-y-1 p-3">
               {navItems.map((item) => (
                 <NavLink
                   key={item.href}
@@ -108,10 +109,10 @@ export function Navigation({ lastUpdated }: NavigationProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
                     [
-                      "block rounded-lg px-4 py-3 text-sm font-medium",
+                      "block rounded-xl px-4 py-3 text-sm font-medium transition-all",
                       isActive
-                        ? "bg-[#3f4759] text-white"
-                        : "text-dashboard-text-muted hover:text-white",
+                        ? "bg-white/[0.12] text-white"
+                        : "text-aether-text-secondary hover:text-white hover:bg-white/[0.06]",
                     ].join(" ")
                   }
                 >

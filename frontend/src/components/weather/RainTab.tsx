@@ -54,12 +54,11 @@ interface TooltipPayloadItem {
   value: number;
 }
 
-// Chart colors
 const COLORS = {
-  ml: "#3b82f6",
+  ml: "#06b6d4",
   dmi: "#f97316",
-  actual: "#10b981",
-  grid: "#334155",
+  actual: "#22c55e",
+  grid: "rgba(255,255,255,0.04)",
 };
 
 export function RainTab({
@@ -135,13 +134,13 @@ export function RainTab({
     }
 
     return (
-      <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-3 shadow-xl">
-        <p className="mb-2 font-medium text-dashboard-text">{formatTooltipDateTime(label)}</p>
+      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+        <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
-          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
-            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-dashboard-text-muted">{entry.name}:</span>
-            <span className="font-semibold text-dashboard-text">
+          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-aether-text-secondary">{entry.name}:</span>
+            <span className="font-semibold text-white">
               {entry.dataKey?.toLowerCase().includes("prob")
                 ? `${entry.value.toFixed(0)}%`
                 : `${entry.value.toFixed(1)} mm`}
@@ -157,99 +156,108 @@ export function RainTab({
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {rainAlert ? (
-        <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-200">
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-200">
           <strong>{rainAlert.title}:</strong> {rainAlert.message}
         </div>
       ) : null}
 
-      <Card className="dashboard-card-flat">
-        <CardContent className="space-y-3 p-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge 
-              variant={rainEventStatus.hasActiveModel ? "default" : "secondary"}
-              className={rainEventStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
-            >
-              Regnrisiko: {rainEventStatus.statusLabel}
-            </Badge>
-            <Badge 
-              variant={rainAmountStatus.hasActiveModel ? "default" : "secondary"}
-              className={rainAmountStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
-            >
-              Regnmængde: {rainAmountStatus.statusLabel}
-            </Badge>
-          </div>
-          <p className="text-sm text-dashboard-text-muted">{explanations.sources}</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className={`dashboard-card-flat ${currentRain.effectiveRainProb > 50 ? "border-blue-500/30" : ""}`}>
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted">Regnrisiko lige nu</p>
-            <div className="mt-2 flex items-center gap-2">
-              {currentRain.effectiveRainProb > 50 ? <CloudRain className="h-6 w-6 text-blue-400" /> : <Sun className="h-6 w-6 text-amber-400" />}
-              <span className="text-2xl font-bold text-dashboard-text">{currentRain.effectiveRainProb > 50 ? "Regn i sigte" : "Tørt lige nu"}</span>
-            </div>
-            <Badge 
-              variant={currentRain.effectiveRainProbSource === "ml" ? "default" : "secondary"}
-              className={`mt-3 ${currentRain.effectiveRainProbSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
-            >
-              {getSourceLabel(currentRain.effectiveRainProbSource)}
-            </Badge>
-            <p className="mt-2 text-sm text-dashboard-text-muted">
-              <span className="text-dashboard-ml">ML: {currentRain.mlRainProb.toFixed(0)}%</span>
-              <span className="mx-2">•</span>
-              <span className="text-dashboard-dmi">DMI: {currentRain.dmiRainProb.toFixed(0)}%</span>
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted">Næste 24 timer</p>
-            <div className="mt-2 flex items-center gap-2">
-              <Droplets className="h-5 w-5 text-dashboard-ml" />
-              <span className="text-xl font-bold text-dashboard-text">
-                {forecast.slice(0, 24).reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
-              </span>
-            </div>
-            <Badge 
-              variant={currentRain.effectiveRainAmountSource === "ml" ? "default" : "secondary"}
-              className={`mt-3 ${currentRain.effectiveRainAmountSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
-            >
-              {getSourceLabel(currentRain.effectiveRainAmountSource)}
-            </Badge>
-          </CardContent>
-        </Card>
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted">Næste 48 timer</p>
-            <div className="mt-2 flex items-center gap-2">
-              <Umbrella className="h-5 w-5 text-dashboard-text-muted" />
-              <span className="text-xl font-bold text-dashboard-text">
-                {forecast.reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-dashboard-text-muted">
-              {forecast.filter((point) => point.effectiveRainProb >= 50).length} timer med høj regnrisiko
-            </p>
-          </CardContent>
-        </Card>
+      <div className="glass-card p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge
+            variant="outline"
+            className={rainEventStatus.hasActiveModel
+              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+            }
+          >
+            Regnrisiko: {rainEventStatus.statusLabel}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={rainAmountStatus.hasActiveModel
+              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+            }
+          >
+            Regnmængde: {rainAmountStatus.statusLabel}
+          </Badge>
+        </div>
+        <p className="text-sm text-aether-text-secondary mt-2">{explanations.sources}</p>
       </div>
 
-      {/* Rain Probability Backtest Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Current Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className={`glass-card p-6 ${currentRain.effectiveRainProb > 50 ? "border-sky-500/30" : ""}`}>
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Regnrisiko lige nu</p>
+          <div className="mt-2 flex items-center gap-2">
+            {currentRain.effectiveRainProb > 50 ? <CloudRain className="h-6 w-6 text-sky-400" /> : <Sun className="h-6 w-6 text-amber-400" />}
+            <span className="text-2xl font-bold text-white">{currentRain.effectiveRainProb > 50 ? "Regn i sigte" : "Tørt lige nu"}</span>
+          </div>
+          <Badge
+            variant="outline"
+            className={`mt-3 text-[10px] ${
+              currentRain.effectiveRainProbSource === "ml"
+                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                : "border-coral/30 text-coral bg-coral/10"
+            }`}
+          >
+            {getSourceLabel(currentRain.effectiveRainProbSource)}
+          </Badge>
+          <div className="mt-3 flex items-center gap-3 text-sm">
+            <span className="text-cyan-400">ML {currentRain.mlRainProb.toFixed(0)}%</span>
+            <span className="text-aether-text-tertiary">•</span>
+            <span className="text-coral">DMI {currentRain.dmiRainProb.toFixed(0)}%</span>
+          </div>
+        </div>
+
+        <div className="glass-card p-6">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Næste 24 timer</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Droplets className="h-5 w-5 text-cyan-400" />
+            <span className="text-2xl font-bold text-white">
+              {forecast.slice(0, 24).reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
+            </span>
+          </div>
+          <Badge
+            variant="outline"
+            className={`mt-3 text-[10px] ${
+              currentRain.effectiveRainAmountSource === "ml"
+                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                : "border-coral/30 text-coral bg-coral/10"
+            }`}
+          >
+            {getSourceLabel(currentRain.effectiveRainAmountSource)}
+          </Badge>
+        </div>
+
+        <div className="glass-card p-6">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Næste 48 timer</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Umbrella className="h-5 w-5 text-aether-text-tertiary" />
+            <span className="text-2xl font-bold text-white">
+              {forecast.reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
+            </span>
+          </div>
+          <p className="mt-3 text-sm text-aether-text-secondary">
+            {forecast.filter((point) => point.effectiveRainProb >= 50).length} timer med høj regnrisiko
+          </p>
+        </div>
+      </div>
+
+      {/* Rain Probability Backtest */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <CloudRain className="h-5 w-5 text-dashboard-text-muted" />
-              Regnrisiko backtest - sidste 7 dage
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <CloudRain className="h-5 w-5 text-aether-text-tertiary" />
+              Regnrisiko backtest — sidste 7 dage
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
-              <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -259,14 +267,15 @@ export function RainTab({
               <ComposedChart data={timelineData.filter((d) => d.actualProb !== null || d.dmiProbHistory !== null || d.mlProbHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
                   <ReferenceLine
                     x={forecastBoundaryTimestamp}
-                    stroke="#475569"
+                    stroke="rgba(255,255,255,0.15)"
                     strokeWidth={2}
-                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                    strokeDasharray="5 5"
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   />
                 ) : null}
                 {hasHistory ? (
@@ -280,22 +289,22 @@ export function RainTab({
         </CardContent>
       </Card>
 
-      {/* Rain Probability Forecast Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Rain Probability Forecast */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <CloudRain className="h-5 w-5 text-dashboard-text-muted" />
-              Regnrisiko forecast - næste 48 timer
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <CloudRain className="h-5 w-5 text-aether-text-tertiary" />
+              Regnrisiko forecast — næste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-dashboard-text-muted">
+          <p className="mb-3 text-sm text-aether-text-secondary">
             Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
@@ -303,63 +312,47 @@ export function RainTab({
               <ComposedChart data={timelineData.filter((d) => d.dmiProbForecast !== null || d.mlProbForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="dmiProbForecast"
-                  name="DMI Forecast"
-                  stroke={COLORS.dmi}
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="mlProbForecast"
-                  name="ML Forecast"
-                  stroke={COLORS.ml}
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="dmiProbForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="mlProbForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-3 text-sm text-dashboard-text-muted">
-            Sammenligning af DMI&apos;s regnrisiko, ML-modellen og faktisk registreret regn de sidste 7 dage.
-          </p>
         </CardContent>
       </Card>
 
-      {/* Rain Amount Backtest Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Rain Amount Backtest */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Droplets className="h-5 w-5 text-dashboard-text-muted" />
-              Regnmængde backtest - sidste 7 dage
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Droplets className="h-5 w-5 text-aether-text-tertiary" />
+              Regnmængde backtest — sidste 7 dage
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
-              <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-dashboard-text-muted">{rainAmountStatus.statusDescription}</p>
+          <p className="text-sm text-aether-text-secondary">{rainAmountStatus.statusDescription}</p>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={timelineData.filter((d) => d.actualAmount !== null || d.dmiAmountHistory !== null || d.mlAmountHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
                   <ReferenceLine
                     x={forecastBoundaryTimestamp}
-                    stroke="#475569"
+                    stroke="rgba(255,255,255,0.15)"
                     strokeWidth={2}
-                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                    strokeDasharray="5 5"
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   />
                 ) : null}
                 {hasHistory ? (
@@ -373,22 +366,22 @@ export function RainTab({
         </CardContent>
       </Card>
 
-      {/* Rain Amount Forecast Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Rain Amount Forecast */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Droplets className="h-5 w-5 text-dashboard-text-muted" />
-              Regnmængde forecast - næste 48 timer
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Droplets className="h-5 w-5 text-aether-text-tertiary" />
+              Regnmængde forecast — næste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-dashboard-text-muted">
+          <p className="mb-3 text-sm text-aether-text-secondary">
             Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
@@ -396,34 +389,21 @@ export function RainTab({
               <ComposedChart data={timelineData.filter((d) => d.dmiAmountForecast !== null || d.mlAmountForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="dmiAmountForecast"
-                  name="DMI Forecast"
-                  stroke={COLORS.dmi}
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="mlAmountForecast"
-                  name="ML Forecast"
-                  stroke={COLORS.ml}
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="dmiAmountForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="mlAmountForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
+      {/* Dry Periods */}
       {dryPeriods.length > 0 ? (
-        <Card className="dashboard-card-flat">
+        <Card className="glass-card border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-dashboard-text">
+            <CardTitle className="flex items-center gap-2 text-base text-white">
               <Sun className="h-4 w-4 text-amber-400" />
               Mulige tørre perioder
             </CardTitle>
@@ -432,22 +412,22 @@ export function RainTab({
             {dryPeriods.map((period) => (
               <div
                 key={`${period.start}-${period.end}`}
-                className="flex items-center justify-between rounded-xl border border-dashboard-border bg-dashboard-card p-3"
+                className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/[0.1] hover:bg-white/[0.04] transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
                     <Cloud className="h-5 w-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-dashboard-text">
-                      kl. {formatDanishTime(forecast[period.start]?.timestamp)} - kl. {formatDanishTime(forecast[period.end]?.timestamp)}
+                    <p className="text-sm font-medium text-white">
+                      {formatDanishTime(forecast[period.start]?.timestamp)} — {formatDanishTime(forecast[period.end]?.timestamp)}
                     </p>
-                    <p className="text-sm text-dashboard-text-muted">
+                    <p className="text-xs text-aether-text-secondary">
                       {forecast[period.start] ? formatShortDate(forecast[period.start].timestamp) : "Ukendt"}
                     </p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="bg-dashboard-border">{period.hours} timer</Badge>
+                <Badge variant="outline" className="text-xs border-white/[0.08] text-aether-text-secondary">{period.hours} timer</Badge>
               </div>
             ))}
           </CardContent>

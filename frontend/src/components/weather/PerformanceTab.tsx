@@ -24,7 +24,7 @@ import {
 
 import { sharedTimeAxisProps } from "@/lib/chart";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDanishDateTime,
@@ -91,10 +91,10 @@ const sectionLabels: Record<PerformanceSection, string> = {
 
 // Chart colors
 const COLORS = {
-  ml: "#3b82f6",
+  ml: "#06b6d4",
   dmi: "#f97316",
-  actual: "#10b981",
-  grid: "#334155",
+  actual: "#22c55e",
+  grid: "rgba(255,255,255,0.04)",
 };
 
 function SeriesTooltip({
@@ -115,13 +115,13 @@ function SeriesTooltip({
   }
 
   return (
-    <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-3 shadow-xl">
-      <p className="mb-2 font-medium text-dashboard-text">{formatTooltipDateTime(label)}</p>
+    <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+      <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
       {payload.map((entry) => (
         <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-dashboard-text-muted">{entry.name}:</span>
-          <span className="font-semibold text-dashboard-text">
+          <span className="text-aether-text-secondary">{entry.name}:</span>
+          <span className="font-semibold text-white">
             {entry.value?.toFixed?.(decimals) || entry.value}{suffix}
           </span>
         </div>
@@ -151,7 +151,7 @@ function TimeSeriesChart({
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
           <XAxis {...sharedTimeAxisProps} />
-          <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={yDomain} stroke={COLORS.grid} />
+          <YAxis tick={{ fontSize: 11, fill: '#64748b' }} domain={yDomain} stroke={COLORS.grid} />
           <Tooltip content={<SeriesTooltip suffix={suffix} />} />
           <Line type="monotone" dataKey="dmi" name={dmiName} stroke={COLORS.dmi} strokeWidth={2} dot={false} strokeOpacity={0.9} />
           <Line type="monotone" dataKey="ml" name={mlName} stroke={COLORS.ml} strokeWidth={2} dot={false} strokeOpacity={0.9} />
@@ -190,7 +190,7 @@ function ErrorChart({
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
           <XAxis {...sharedTimeAxisProps} />
-          <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} domain={yDomain} stroke={COLORS.grid} />
+          <YAxis tick={{ fontSize: 11, fill: '#64748b' }} domain={yDomain} stroke={COLORS.grid} />
           <Tooltip content={<SeriesTooltip suffix={suffix} decimals={2} />} />
           <Area type="monotone" dataKey="dmiError" name="DMI fejl" stroke={COLORS.dmi} fill="url(#dmiErrorGradient)" strokeWidth={2} dot={false} />
           <Area type="monotone" dataKey="mlError" name="ML fejl" stroke={COLORS.ml} fill="url(#mlErrorGradient)" strokeWidth={2} dot={false} />
@@ -293,104 +293,80 @@ export function PerformanceTab({
   const rainAmountErrors = useMemo(() => toErrorData(rainAmountSeries), [rainAmountSeries]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <section className="text-center mb-6">
-        <h1 className="text-3xl font-bold mb-2 text-dashboard-text">Model Performance and Accuracy Analysis</h1>
-        <p className="text-dashboard-text-muted max-w-3xl mx-auto text-sm leading-relaxed">
-          Sammenlign ML-modellernes præcision med DMI's prognoser og faktisk vejrdata. 
-          Se hvordan modellen klarer sig på forskellige parametre og tidshorisonter.
-        </p>
-      </section>
-
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {/* Metric Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="dashboard-card-flat border-l-4 border-l-emerald-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-dashboard-text-muted">% ML was more accurate</p>
-                <p className="mt-1 text-4xl font-bold text-emerald-500">
-                  {verification.winRate !== null ? `${verification.winRate.toFixed(1)}%` : "—"}
-                </p>
-                <p className="text-xs text-dashboard-text-muted mt-1">
-                  Den prognose, som alle sammenligninger starter fra
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-                <Award className="h-6 w-6 text-emerald-500" />
-              </div>
+        <div className="glass-card p-6 border-l-2 border-l-emerald-400">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">ML win rate</p>
+              <p className="text-4xl font-bold text-emerald-400">
+                {verification.winRate !== null ? `${verification.winRate.toFixed(1)}%` : "—"}
+              </p>
+              <p className="text-xs text-aether-text-secondary mt-1">Hvor ofte ML ramte rigtigst</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10">
+              <Award className="h-6 w-6 text-emerald-400" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="dashboard-card-flat border-l-4 border-l-cyan-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-dashboard-text-muted">Average deviation</p>
-                <p className="mt-1 text-4xl font-bold text-cyan-500">
-                  {verification.maeMl !== null ? verification.maeMl.toFixed(2) : "—"}
-                </p>
-                <p className="text-xs text-dashboard-text-muted mt-1">
-                  Vores justerede bud på virkeligheden
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20">
-                <Target className="h-6 w-6 text-cyan-500" />
-              </div>
+        <div className="glass-card p-6 border-l-2 border-l-cyan-400">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Gennemsnitlig afvigelse</p>
+              <p className="text-4xl font-bold text-cyan-400">
+                {verification.maeMl !== null ? verification.maeMl.toFixed(2) : "—"}
+              </p>
+              <p className="text-xs text-aether-text-secondary mt-1">Typisk afvigelse fra virkeligheden</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10">
+              <Target className="h-6 w-6 text-cyan-400" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="dashboard-card-flat border-l-4 border-l-blue-500">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-dashboard-text-muted">General precision score</p>
-                <p className="mt-1 text-4xl font-bold text-blue-500">
-                  {verification.rmseMl !== null ? verification.rmseMl.toFixed(2) : "—"}
-                </p>
-                <p className="text-xs text-dashboard-text-muted mt-1">
-                  Jo lavere værdi, jo bedre præcision
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/20">
-                <BarChart3 className="h-6 w-6 text-blue-500" />
-              </div>
+        <div className="glass-card p-6 border-l-2 border-l-violet-400">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">RMSE score</p>
+              <p className="text-4xl font-bold text-violet-400">
+                {verification.rmseMl !== null ? verification.rmseMl.toFixed(2) : "—"}
+              </p>
+              <p className="text-xs text-aether-text-secondary mt-1">Jo lavere værdi, jo bedre</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-400/10">
+              <BarChart3 className="h-6 w-6 text-violet-400" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Section Tabs */}
       <div className="flex flex-wrap gap-2">
         {(["temperature", "wind", "rain"] as PerformanceSection[]).map((item) => (
-          <Button
+          <button
             key={item}
-            variant={section === item ? "default" : "outline"}
             onClick={() => setSection(item)}
-            className={section === item ? "bg-dashboard-ml" : "border-dashboard-border text-dashboard-text"}
+            className={`rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${section === item ? "bg-white/[0.12] text-white shadow-lg" : "bg-white/[0.03] text-aether-text-secondary hover:text-white hover:bg-white/[0.06] border border-white/[0.06]"}`}
           >
             {sectionLabels[item]}
-          </Button>
+          </button>
         ))}
       </div>
 
-      {/* Historical Comparison Chart */}
-      <Card className="dashboard-card-flat">
+      <Card className="glass-card border-0">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-dashboard-text">
-            <TrendingUp className="h-5 w-5 text-dashboard-text-muted" />
+          <CardTitle className="flex items-center gap-2 text-base text-white">
+            <TrendingUp className="h-5 w-5 text-aether-text-tertiary" />
             Historisk sammenligning: {sectionLabels[section]}
           </CardTitle>
-          <CardDescription className="text-dashboard-text-muted">
+          <CardDescription className="text-aether-text-secondary text-sm">
             Sammenlign DMI, ML og faktisk vejr i den seneste verificerede historik.
           </CardDescription>
-          <div className="flex flex-wrap items-center gap-4 text-sm pt-2">
-            <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
+          <div className="flex flex-wrap items-center gap-4 text-xs pt-2">
+            <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
             <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-            <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk</span>
+            <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -426,14 +402,13 @@ export function PerformanceTab({
         </CardContent>
       </Card>
 
-      {/* Error Analysis Chart */}
-      <Card className="dashboard-card-flat">
+      <Card className="glass-card border-0">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-dashboard-text">
-            <AlertTriangle className="h-5 w-5 text-dashboard-text-muted" />
+          <CardTitle className="flex items-center gap-2 text-base text-white">
+            <AlertTriangle className="h-5 w-5 text-aether-text-tertiary" />
             Fejlanalyse: {sectionLabels[section]}
           </CardTitle>
-          <CardDescription className="text-dashboard-text-muted">
+          <CardDescription className="text-aether-text-secondary text-sm">
             Viser absolutte fejl for DMI og ML-prognoser sammenlignet med faktisk vejr. Lavere er bedre.
           </CardDescription>
         </CardHeader>
@@ -470,81 +445,82 @@ export function PerformanceTab({
         </CardContent>
       </Card>
 
-      {/* Model Info Cards */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="dashboard-card-flat">
+        <Card className="glass-card border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-dashboard-text">
-              <Cpu className="h-4 w-4 text-dashboard-text-muted" />
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Cpu className="h-4 w-4 text-aether-text-tertiary" />
               Hvad modellen lægger vægt på
             </CardTitle>
-            <CardDescription className="text-dashboard-text-muted">
-              Det, som modellen lægger mest vægt på i sine beregninger.
+            <CardDescription className="text-aether-text-secondary text-sm">
+              Features der har størst indflydelse på modellens forudsigelser.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {visibleFeatures.length > 0 ? (
               visibleFeatures.map((feature) => (
-                <div key={`${feature.target}-${feature.feature}`} className="space-y-1">
+                <div key={`${feature.target}-${feature.feature}`} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-dashboard-text">
+                    <span className="text-white">
                       {humanizeFeatureName(feature.feature)}{" "}
-                      <span className="text-dashboard-text-muted">({getFeatureTargetBadge(feature, targetLabels)})</span>
+                      <span className="text-aether-text-tertiary">({getFeatureTargetBadge(feature, targetLabels)})</span>
                     </span>
-                    <span className="font-medium text-dashboard-text">{(feature.importance * 100).toFixed(1)}%</span>
+                    <span className="font-medium text-cyan-400">{(feature.importance * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-dashboard-border">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-dashboard-ml to-dashboard-ml/70"
-                      style={{ width: `${Math.max(feature.importance * 100, 2)}%` }}
+                  <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.max(feature.importance * 100, 2)}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500"
                     />
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-dashboard-text-muted">
+              <p className="text-sm text-aether-text-secondary">
                 Feature importance er ikke tilgængelig for dette signal endnu.
               </p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="dashboard-card-flat">
+        <Card className="glass-card border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-dashboard-text">
-              <CheckCircle className="h-4 w-4 text-dashboard-text-muted" />
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <CheckCircle className="h-4 w-4 text-aether-text-tertiary" />
               Modelinfo og status
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl border border-dashboard-border bg-dashboard-card p-3">
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-dashboard-text-muted" />
-                <span className="text-sm text-dashboard-text-muted">Sidste træning</span>
+                <Calendar className="h-4 w-4 text-aether-text-tertiary" />
+                <span className="text-sm text-aether-text-secondary">Sidste træning</span>
               </div>
-              <span className="text-sm font-medium text-dashboard-text">
+              <span className="text-sm font-medium text-white">
                 {modelInfo.trainedAt ? formatDanishDateTime(modelInfo.trainedAt) : "Ukendt"}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-dashboard-border bg-dashboard-card p-3">
-              <span className="text-sm text-dashboard-text-muted">Træningssamples</span>
-              <span className="text-sm font-medium text-dashboard-text">
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <span className="text-sm text-aether-text-secondary">Træningssamples</span>
+              <span className="text-sm font-medium text-white">
                 {modelInfo.trainingSamples !== null ? modelInfo.trainingSamples.toLocaleString("da-DK") : "Ukendt"}
               </span>
             </div>
-            <div className="space-y-3 rounded-xl border border-dashboard-border bg-dashboard-card p-3">
+            <div className="space-y-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               {selectedStatus.map(({ target, status }) => (
                 <div key={target}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-dashboard-text">{getTargetLabel(targetLabels, target)}</span>
-                    <Badge 
-                      variant={status.hasActiveModel ? "default" : "secondary"}
-                      className={status.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
+                    <span className="text-sm font-medium text-white">{getTargetLabel(targetLabels, target)}</span>
+                    <Badge
+                      variant="outline"
+                      className={status.hasActiveModel ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10 text-[10px]" : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03] text-[10px]"}
                     >
                       {status.statusLabel}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-sm text-dashboard-text-muted">{status.statusDescription}</p>
+                  <p className="mt-1 text-sm text-aether-text-secondary">{status.statusDescription}</p>
                 </div>
               ))}
             </div>

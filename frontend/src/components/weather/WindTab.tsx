@@ -59,12 +59,11 @@ interface TooltipPayloadItem {
   value: number;
 }
 
-// Chart colors
 const COLORS = {
-  ml: "#3b82f6",
+  ml: "#06b6d4",
   dmi: "#f97316",
-  actual: "#10b981",
-  grid: "#334155",
+  actual: "#22c55e",
+  grid: "rgba(255,255,255,0.04)",
 };
 
 function WindCompass({ direction, size = 84 }: { direction: number | null; size?: number }) {
@@ -73,17 +72,17 @@ function WindCompass({ direction, size = 84 }: { direction: number | null; size?
 
   return (
     <div
-      className="relative flex items-center justify-center rounded-full border-2 border-dashboard-border bg-dashboard-card"
+      className="relative flex items-center justify-center rounded-full border-2 border-white/[0.08] bg-white/[0.03]"
       style={{ width: size, height: size }}
     >
-      <span className="absolute top-1 text-[10px] font-bold text-dashboard-text-muted">N</span>
-      <span className="absolute right-1 text-[10px] font-bold text-dashboard-text-muted">Ø</span>
-      <span className="absolute bottom-1 text-[10px] font-bold text-dashboard-text-muted">S</span>
-      <span className="absolute left-1 text-[10px] font-bold text-dashboard-text-muted">V</span>
+      <span className="absolute top-1 text-[10px] font-bold text-aether-text-tertiary">N</span>
+      <span className="absolute right-1 text-[10px] font-bold text-aether-text-tertiary">Ø</span>
+      <span className="absolute bottom-1 text-[10px] font-bold text-aether-text-tertiary">S</span>
+      <span className="absolute left-1 text-[10px] font-bold text-aether-text-tertiary">V</span>
       <motion.div animate={{ rotate: rotation }} transition={{ duration: 0.45, ease: "easeOut" }}>
-        <Navigation className="h-8 w-8 text-dashboard-ml" fill="currentColor" />
+        <Navigation className="h-8 w-8 text-cyan-400" fill="currentColor" />
       </motion.div>
-      <span className="absolute bottom-4 text-[10px] font-medium text-dashboard-text-muted">{label}</span>
+      <span className="absolute bottom-4 text-[10px] font-medium text-aether-text-tertiary">{label}</span>
     </div>
   );
 }
@@ -151,13 +150,13 @@ export function WindTab({
     }
 
     return (
-      <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-3 shadow-xl">
-        <p className="mb-2 font-medium text-dashboard-text">{formatTooltipDateTime(label)}</p>
+      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+        <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
-          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
-            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-dashboard-text-muted">{entry.name}:</span>
-            <span className="font-semibold text-dashboard-text">{entry.value?.toFixed?.(1) || entry.value} m/s</span>
+          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-aether-text-secondary">{entry.name}:</span>
+            <span className="font-semibold text-white">{entry.value?.toFixed?.(1) || entry.value} m/s</span>
           </div>
         ))}
       </div>
@@ -169,110 +168,113 @@ export function WindTab({
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {warning ? (
-        <Alert className="border-red-500 bg-red-500/10 text-red-200">
+        <Alert className="border-rose-500/30 bg-rose-500/10 text-rose-200">
           <AlertTriangle className="h-5 w-5" />
           <AlertDescription>{warning.message}</AlertDescription>
         </Alert>
       ) : null}
 
-      <Card className="dashboard-card-flat">
-        <CardContent className="space-y-3 p-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge 
-              variant={windStatus.hasActiveModel ? "default" : "secondary"}
-              className={windStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
-            >
-              {windStatus.statusLabel}
-            </Badge>
-            <Badge 
-              variant={gustStatus.hasActiveModel ? "default" : "secondary"}
-              className={gustStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
-            >
-              Vindstød: {gustStatus.statusLabel}
-            </Badge>
-          </div>
-          <p className="text-sm text-dashboard-text-muted">{explanations.sources}</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-dashboard-text-muted">Vindhastighed nu</p>
-                <p className="mt-1 text-4xl font-bold text-dashboard-text">
-                  {currentWind.effectiveWindSpeed !== null ? currentWind.effectiveWindSpeed.toFixed(1) : "—"}
-                  <span className="ml-1 text-lg font-normal text-dashboard-text-muted">m/s</span>
-                </p>
-                <Badge 
-                  variant={currentWind.effectiveWindSpeedSource === "ml" ? "default" : "secondary"} 
-                  className={`mt-2 ${currentWind.effectiveWindSpeedSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
-                >
-                  {getSourceLabel(currentWind.effectiveWindSpeedSource)}
-                </Badge>
-                <p className="mt-2 text-sm text-dashboard-ml">
-                  ML: {currentWind.mlWindSpeed !== null ? `${currentWind.mlWindSpeed.toFixed(1)} m/s` : "ikke aktiv"}
-                </p>
-                <p className="text-sm text-dashboard-dmi">
-                  DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "ingen data"}
-                </p>
-              </div>
-              <WindCompass direction={currentWind.windDirection} size={104} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted">Vindstød</p>
-            <p className="mt-1 text-4xl font-bold text-dashboard-text">
-              {currentWind.effectiveWindGust !== null ? currentWind.effectiveWindGust.toFixed(1) : "—"}
-              <span className="ml-1 text-lg font-normal text-dashboard-text-muted">m/s</span>
-            </p>
-            <Badge 
-              variant={currentWind.effectiveWindGustSource === "ml" ? "default" : "secondary"}
-              className={`mt-2 ${currentWind.effectiveWindGustSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
-            >
-              {getSourceLabel(currentWind.effectiveWindGustSource)}
-            </Badge>
-            <p className="mt-2 text-sm text-dashboard-ml">
-              ML: {currentWind.mlWindGust !== null ? `${currentWind.mlWindGust.toFixed(1)} m/s` : "ikke aktiv"}
-            </p>
-            <p className="text-sm text-dashboard-dmi">
-              DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "ingen data"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted">Vindretning</p>
-            <p className="mt-1 text-3xl font-bold text-dashboard-text">{getWindDirectionLabel(currentWind.windDirection)}</p>
-            <p className="mt-1 text-sm text-dashboard-text-muted">
-              {currentWind.windDirection !== null ? `${Math.round(currentWind.windDirection)}°` : "Ingen data"}
-            </p>
-            <p className="mt-3 text-sm text-dashboard-text-muted">
-              Pilets retning viser hvorfra vinden kommer.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="glass-card p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge
+            variant="outline"
+            className={windStatus.hasActiveModel
+              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+            }
+          >
+            {windStatus.statusLabel}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={gustStatus.hasActiveModel
+              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+            }
+          >
+            Vindstød: {gustStatus.statusLabel}
+          </Badge>
+        </div>
+        <p className="text-sm text-aether-text-secondary mt-2">{explanations.sources}</p>
       </div>
 
-      {/* Wind Speed Backtest Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Current Wind Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Vindhastighed nu</p>
+              <p className="text-4xl font-bold text-white">
+                {currentWind.effectiveWindSpeed !== null ? currentWind.effectiveWindSpeed.toFixed(1) : "—"}
+                <span className="ml-1 text-lg font-normal text-aether-text-secondary">m/s</span>
+              </p>
+              <Badge
+                variant="outline"
+                className={`mt-3 text-[10px] ${
+                  currentWind.effectiveWindSpeedSource === "ml"
+                    ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                    : "border-coral/30 text-coral bg-coral/10"
+                }`}
+              >
+                {getSourceLabel(currentWind.effectiveWindSpeedSource)}
+              </Badge>
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-cyan-400">ML: {currentWind.mlWindSpeed !== null ? `${currentWind.mlWindSpeed.toFixed(1)} m/s` : "ikke aktiv"}</p>
+                <p className="text-coral">DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "ingen data"}</p>
+              </div>
+            </div>
+            <WindCompass direction={currentWind.windDirection} size={104} />
+          </div>
+        </div>
+
+        <div className="glass-card p-6">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Vindstød</p>
+          <p className="text-4xl font-bold text-white">
+            {currentWind.effectiveWindGust !== null ? currentWind.effectiveWindGust.toFixed(1) : "—"}
+            <span className="ml-1 text-lg font-normal text-aether-text-secondary">m/s</span>
+          </p>
+          <Badge
+            variant="outline"
+            className={`mt-3 text-[10px] ${
+              currentWind.effectiveWindGustSource === "ml"
+                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                : "border-coral/30 text-coral bg-coral/10"
+            }`}
+          >
+            {getSourceLabel(currentWind.effectiveWindGustSource)}
+          </Badge>
+          <div className="mt-3 space-y-1 text-xs">
+            <p className="text-cyan-400">ML: {currentWind.mlWindGust !== null ? `${currentWind.mlWindGust.toFixed(1)} m/s` : "ikke aktiv"}</p>
+            <p className="text-coral">DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "ingen data"}</p>
+          </div>
+        </div>
+
+        <div className="glass-card p-6">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Vindretning</p>
+          <p className="text-3xl font-bold text-white">{getWindDirectionLabel(currentWind.windDirection)}</p>
+          <p className="text-sm text-aether-text-secondary mt-1">
+            {currentWind.windDirection !== null ? `${Math.round(currentWind.windDirection)}°` : "Ingen data"}
+          </p>
+          <p className="mt-4 text-xs text-aether-text-tertiary">
+            Pilens retning viser hvorfra vinden kommer.
+          </p>
+        </div>
+      </div>
+
+      {/* Wind Speed Backtest */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Wind className="h-5 w-5 text-dashboard-text-muted" />
-              Vindhastighed backtest - sidste 7 dage
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Wind className="h-5 w-5 text-aether-text-tertiary" />
+              Vindhastighed backtest — sidste 7 dage
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
-              <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -282,24 +284,25 @@ export function WindTab({
               <AreaChart data={timelineData.filter((d) => d.actualSpeed !== null || d.dmiSpeedHistory !== null || d.mlSpeedHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="windMlGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="windDmiGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
                 {forecastBoundaryTimestamp ? (
                   <ReferenceLine
                     x={forecastBoundaryTimestamp}
-                    stroke="#475569"
+                    stroke="rgba(255,255,255,0.15)"
                     strokeWidth={2}
-                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                    strokeDasharray="5 5"
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   />
                 ) : null}
                 {showDmi ? (
@@ -314,28 +317,28 @@ export function WindTab({
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-3 text-sm text-dashboard-text-muted">
-            Sammenligning af DMI&apos;s vindprognose, ML-modellen og faktisk målt vindhastighed de sidste 7 dage.
+          <p className="mt-3 text-sm text-aether-text-secondary">
+            Sammenligning af DMI's vindprognose, ML-modellen og faktisk målt vindhastighed de sidste 7 dage.
           </p>
         </CardContent>
       </Card>
 
-      {/* Wind Speed Forecast Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      {/* Wind Speed Forecast */}
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Wind className="h-5 w-5 text-dashboard-text-muted" />
-              Vindhastighed forecast - næste 48 timer
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Wind className="h-5 w-5 text-aether-text-tertiary" />
+              Vindhastighed forecast — næste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
               <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-dashboard-text-muted">
+          <p className="mb-3 text-sm text-aether-text-secondary">
             Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[300px] w-full">
@@ -343,39 +346,23 @@ export function WindTab({
               <AreaChart data={timelineData.filter((d) => d.dmiSpeedForecast !== null || d.mlSpeedForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="windForecastMlGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="windForecastDmiGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
-                  <Area
-                    type="monotone"
-                    dataKey="dmiSpeedForecast"
-                    name="DMI Forecast"
-                    stroke={COLORS.dmi}
-                    strokeWidth={2}
-                    fill="url(#windForecastDmiGradient)"
-                    dot={false}
-                  />
+                  <Area type="monotone" dataKey="dmiSpeedForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="url(#windForecastDmiGradient)" dot={false} />
                 ) : null}
                 {showMlSpeed ? (
-                  <Area
-                    type="monotone"
-                    dataKey="mlSpeedForecast"
-                    name="ML Forecast"
-                    stroke={COLORS.ml}
-                    strokeWidth={2}
-                    fill="url(#windForecastMlGradient)"
-                    dot={false}
-                  />
+                  <Area type="monotone" dataKey="mlSpeedForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="url(#windForecastMlGradient)" dot={false} />
                 ) : null}
               </AreaChart>
             </ResponsiveContainer>
@@ -385,18 +372,17 @@ export function WindTab({
 
       {showGusts ? (
         <>
-          {/* Wind Gust Backtest Chart */}
-          <Card className="dashboard-card-flat">
-            <CardHeader className="pb-2">
+          <Card className="glass-card border-0">
+            <CardHeader className="pb-3">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="flex items-center gap-2 text-dashboard-text">
-                  <Wind className="h-5 w-5 text-dashboard-text-muted" />
-                  Vindstød backtest - sidste 7 dage
+                <CardTitle className="flex items-center gap-2 text-base text-white">
+                  <Wind className="h-5 w-5 text-aether-text-tertiary" />
+                  Vindstød backtest — sidste 7 dage
                 </CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="flex flex-wrap items-center gap-4 text-xs">
                   <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-                  <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
-                  <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk</span>
+                  <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+                  <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
                 </div>
               </div>
             </CardHeader>
@@ -406,24 +392,25 @@ export function WindTab({
                   <AreaChart data={timelineData.filter((d) => d.actualGust !== null || d.dmiGustHistory !== null || d.mlGustHistory !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gustMlGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                        <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                       </linearGradient>
                       <linearGradient id="gustDmiGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                        <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                     <XAxis {...sharedTimeAxisProps} />
-                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                     <Tooltip content={<CustomTooltip />} />
                     {forecastBoundaryTimestamp ? (
                       <ReferenceLine
                         x={forecastBoundaryTimestamp}
-                        stroke="#475569"
+                        stroke="rgba(255,255,255,0.15)"
                         strokeWidth={2}
-                        label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                        strokeDasharray="5 5"
+                        label={{ value: "Nu", position: "top", fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                       />
                     ) : null}
                     {showDmi ? (
@@ -441,22 +428,21 @@ export function WindTab({
             </CardContent>
           </Card>
 
-          {/* Wind Gust Forecast Chart */}
-          <Card className="dashboard-card-flat">
-            <CardHeader className="pb-2">
+          <Card className="glass-card border-0">
+            <CardHeader className="pb-3">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="flex items-center gap-2 text-dashboard-text">
-                  <Wind className="h-5 w-5 text-dashboard-text-muted" />
-                  Vindstød forecast - næste 48 timer
+                <CardTitle className="flex items-center gap-2 text-base text-white">
+                  <Wind className="h-5 w-5 text-aether-text-tertiary" />
+                  Vindstød forecast — næste 48 timer
                 </CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="flex flex-wrap items-center gap-4 text-xs">
                   <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
-                  <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML</span>
+                  <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="mb-3 text-sm text-dashboard-text-muted">
+              <p className="mb-3 text-sm text-aether-text-secondary">
                 Faktisk data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
               </p>
               <div className="h-[300px] w-full">
@@ -464,39 +450,23 @@ export function WindTab({
                   <AreaChart data={timelineData.filter((d) => d.dmiGustForecast !== null || d.mlGustForecast !== null)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gustForecastMlGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                        <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                       </linearGradient>
                       <linearGradient id="gustForecastDmiGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                        <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                     <XAxis {...sharedTimeAxisProps} />
-                    <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                     <Tooltip content={<CustomTooltip />} />
                     {showDmi ? (
-                      <Area
-                        type="monotone"
-                        dataKey="dmiGustForecast"
-                        name="DMI Forecast"
-                        stroke={COLORS.dmi}
-                        strokeWidth={2}
-                        fill="url(#gustForecastDmiGradient)"
-                        dot={false}
-                      />
+                      <Area type="monotone" dataKey="dmiGustForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="url(#gustForecastDmiGradient)" dot={false} />
                     ) : null}
                     {showMlGust ? (
-                      <Area
-                        type="monotone"
-                        dataKey="mlGustForecast"
-                        name="ML Forecast"
-                        stroke={COLORS.ml}
-                        strokeWidth={2}
-                        fill="url(#gustForecastMlGradient)"
-                        dot={false}
-                      />
+                      <Area type="monotone" dataKey="mlGustForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="url(#gustForecastMlGradient)" dot={false} />
                     ) : null}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -507,22 +477,26 @@ export function WindTab({
       ) : null}
 
       {/* Wind Direction Cards */}
-      <Card className="dashboard-card-flat">
+      <Card className="glass-card border-0">
         <CardHeader>
-          <CardTitle className="text-base text-dashboard-text">Vindretning de næste 12 timer</CardTitle>
+          <CardTitle className="text-base text-white">Vindretning de næste 12 timer</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
           {forecast.slice(0, 12).map((hour) => (
             <div key={hour.timestamp} className="flex flex-col items-center">
               <WindCompass direction={hour.windDirection} size={64} />
-              <span className="mt-1 text-xs text-dashboard-text-muted">kl. {formatDanishTime(hour.timestamp)}</span>
-              <Badge 
-                variant={hour.effectiveWindSpeedSource === "ml" ? "default" : "secondary"}
-                className={`mt-1 ${hour.effectiveWindSpeedSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
+              <span className="mt-1 text-xs text-aether-text-secondary">{formatDanishTime(hour.timestamp)}</span>
+              <Badge
+                variant="outline"
+                className={`mt-1 text-[10px] ${
+                  hour.effectiveWindSpeedSource === "ml"
+                    ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                    : "border-coral/30 text-coral bg-coral/10"
+                }`}
               >
                 {getSourceLabel(hour.effectiveWindSpeedSource)}
               </Badge>
-              <span className="mt-1 text-xs font-medium text-dashboard-text">
+              <span className="mt-1 text-xs font-medium text-white">
                 {hour.effectiveWindSpeed !== null ? `${hour.effectiveWindSpeed.toFixed(0)} m/s` : "—"}
               </span>
             </div>

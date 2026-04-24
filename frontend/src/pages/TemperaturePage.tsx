@@ -5,7 +5,6 @@ import { PageState } from "@/components/PageState";
 import { SeoHead } from "@/components/SeoHead";
 import { useDashboardOutlet } from "@/hooks/useDashboardOutlet";
 import { temperatureSeo } from "@/lib/seo";
-import { Card, CardContent } from "@/components/ui/card";
 
 const TemperatureTab = lazy(() =>
   import("@/components/weather/TemperatureTab").then((module) => ({ default: module.TemperatureTab })),
@@ -14,8 +13,7 @@ const TemperatureTab = lazy(() =>
 export function TemperaturePage() {
   const { response } = useDashboardOutlet();
   const snapshot = response.snapshot;
-  
-  // Calculate deviation
+
   const dmiTemp = snapshot.current.dmiTemp;
   const mlTemp = snapshot.current.mlTemp;
   const deviation = mlTemp !== null && dmiTemp !== null ? mlTemp - dmiTemp : null;
@@ -23,49 +21,45 @@ export function TemperaturePage() {
   return (
     <div className="space-y-6">
       <SeoHead config={temperatureSeo} />
-      
-      {/* Header with Breadcrumb */}
-      <section className="text-center mb-6">
-        <h1 className="text-3xl font-bold mb-2 text-dashboard-text">Temperatur Details and Forecast</h1>
-        <p className="text-dashboard-text-muted max-w-3xl mx-auto text-sm leading-relaxed">
-          Følg temperaturprognosen for Aarhus og se forskellen mellem DMI's prognoser og vores 
-          ML-justerede bud. Grafen viser både historisk data og prognoser for de kommende timer.
-        </p>
-        <p className="text-dashboard-text-muted text-sm mt-2">
-          <span className="underline cursor-pointer hover:text-dashboard-text">Forside</span>
-          <span className="mx-2">&gt;</span>
-          <span>Temperatur</span>
-        </p>
+
+      {/* Header */}
+      <section className="glass-card p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-2">
+              Temperatur i <span className="text-gradient-cyan">Aarhus</span>
+            </h1>
+            <p className="text-sm text-aether-text-secondary max-w-2xl leading-relaxed">
+              Følg temperaturprognosen og se forskellen mellem DMI's prognoser og vores 
+              ML-justerede bud. Grafen viser både historisk data og prognoser.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted mb-1">Nuværende Temperatur</p>
-            <p className="text-2xl font-bold text-dashboard-ml">
-              ML: {mlTemp !== null ? `${Math.round(mlTemp)}°C` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted mb-1">Nuværende Temperatur</p>
-            <p className="text-2xl font-bold text-dashboard-dmi">
-              DMI: {dmiTemp !== null ? `${Math.round(dmiTemp)}°C` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="dashboard-card-flat">
-          <CardContent className="p-6">
-            <p className="text-sm text-dashboard-text-muted mb-1">ML vs DMI</p>
-            <p className="text-2xl font-bold text-white">
-              Afvigelse: {deviation !== null ? `${deviation > 0 ? '+' : ''}${deviation.toFixed(0)}°C` : "—"}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="glass-card p-6 border-l-2 border-l-cyan-400">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">ML Temperatur</p>
+          <p className="text-4xl font-bold text-cyan-400">
+            {mlTemp !== null ? `${Math.round(mlTemp)}°C` : "—"}
+          </p>
+          <p className="text-xs text-aether-text-secondary mt-1">Maskinlæringsprognose</p>
+        </div>
+        <div className="glass-card p-6 border-l-2 border-l-coral">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">DMI Temperatur</p>
+          <p className="text-4xl font-bold text-coral">
+            {dmiTemp !== null ? `${Math.round(dmiTemp)}°C` : "—"}
+          </p>
+          <p className="text-xs text-aether-text-secondary mt-1">DMI's officielle prognose</p>
+        </div>
+        <div className="glass-card p-6 border-l-2 border-l-violet-400">
+          <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Afvigelse</p>
+          <p className="text-4xl font-bold text-violet-400">
+            {deviation !== null ? `${deviation > 0 ? '+' : ''}${deviation.toFixed(0)}°C` : "—"}
+          </p>
+          <p className="text-xs text-aether-text-secondary mt-1">Forskel ML vs DMI</p>
+        </div>
       </div>
 
       <Suspense

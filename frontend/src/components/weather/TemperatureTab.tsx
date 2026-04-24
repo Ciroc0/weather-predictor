@@ -14,7 +14,6 @@ import {
 } from "recharts";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { sharedTimeAxisProps } from "@/lib/chart";
 import { formatDanishTime, formatTooltipDateTime, getSourceLabel } from "@/lib/weather";
@@ -50,13 +49,12 @@ interface TooltipPayloadItem {
   value: number;
 }
 
-// Chart colors matching the design
 const COLORS = {
-  ml: "#3b82f6",
+  ml: "#06b6d4",
   dmi: "#f97316",
-  actual: "#10b981",
-  apparent: "#f59e0b",
-  grid: "#334155",
+  actual: "#22c55e",
+  apparent: "#fbbf24",
+  grid: "rgba(255,255,255,0.04)",
 };
 
 export function TemperatureTab({
@@ -122,13 +120,13 @@ export function TemperatureTab({
     }
 
     return (
-      <div className="rounded-xl border border-dashboard-border bg-dashboard-card p-3 shadow-xl">
-        <p className="mb-2 font-medium text-dashboard-text">{formatTooltipDateTime(label)}</p>
+      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+        <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
-          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
-            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span className="text-dashboard-text-muted">{entry.name}:</span>
-            <span className="font-semibold text-dashboard-text">{entry.value?.toFixed?.(1) || entry.value}°C</span>
+          <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-aether-text-secondary">{entry.name}:</span>
+            <span className="font-semibold text-white">{entry.value?.toFixed?.(1) || entry.value}°C</span>
           </div>
         ))}
       </div>
@@ -136,85 +134,85 @@ export function TemperatureTab({
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {/* Status Card */}
-      <Card className="dashboard-card-flat">
-        <CardContent className="space-y-3 p-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge 
-              variant={targetStatus.hasActiveModel ? "default" : "secondary"}
-              className={targetStatus.hasActiveModel ? "bg-dashboard-ml" : "bg-dashboard-border"}
-            >
-              {targetStatus.statusLabel}
-            </Badge>
-            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed border-dashboard-border text-dashboard-text-muted">
-              {explanations.forecast}
-            </Badge>
-          </div>
-          <p className="text-sm text-dashboard-text-muted">{targetStatus.statusDescription}</p>
-        </CardContent>
-      </Card>
-
-      {/* Stats and Help */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-dashboard-ml to-dashboard-ml/70 px-4 py-2 text-sm font-semibold text-white shadow-lg">
-              <TrendingDown className="h-4 w-4 shrink-0" />
-              <span className="whitespace-normal leading-relaxed">
-                {improvement !== null
-                  ? `ML har ${improvement.toFixed(1)}% lavere fejl end DMI`
-                  : "Temperaturmodellen evalueres løbende"}
-              </span>
-            </div>
-            <Badge variant="secondary" className="max-w-full whitespace-normal text-left leading-relaxed bg-dashboard-border text-dashboard-text">
-              {avgDiff !== null ? `Typisk forskel: ${avgDiff.toFixed(2)}°C` : "Ingen aktiv ML-forskel endnu"}
-            </Badge>
-            <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-relaxed border-dashboard-border text-dashboard-text-muted">
-              {maxDiff !== null ? `Største forskel: ${maxDiff.toFixed(1)}°C` : "Ingen største forskel endnu"}
-            </Badge>
-          </div>
-          <Button
-            type="button"
+      <div className="glass-card p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge
             variant="outline"
-            size="sm"
-            className="w-full justify-start sm:w-auto border-dashboard-border text-dashboard-text hover:bg-dashboard-card"
-            onClick={() => setShowChartHelp((value) => !value)}
-            aria-expanded={showChartHelp}
-            aria-controls="temperature-chart-help"
+            className={targetStatus.hasActiveModel
+              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+            }
           >
-            <Info className="h-4 w-4 mr-2" />
-            {showChartHelp ? "Skjul guide til grafer" : "Sådan læser du grafen"}
-          </Button>
+            {targetStatus.statusLabel}
+          </Badge>
+          <Badge variant="outline" className="text-xs border-white/[0.08] text-aether-text-secondary bg-white/[0.03] max-w-full whitespace-normal text-left leading-relaxed">
+            {explanations.forecast}
+          </Badge>
         </div>
-        {showChartHelp ? (
-          <Card id="temperature-chart-help" className="border-dashed border-dashboard-border bg-dashboard-card">
-            <CardContent className="space-y-3 p-4 text-sm text-dashboard-text-muted">
-              <div>
-                <p className="font-medium text-dashboard-text">Backtest (historik)</p>
-                <p>Blå streg = faktisk målt temperatur. Turkis og orange viser DMI og ML for samme tidspunkt.</p>
-              </div>
-              <div>
-                <p className="font-medium text-dashboard-text">Forecast (fremtid)</p>
-                <p>Turkis linje = DMI-prognose. Orange linje = ML-justeret prognose. Gul viser følt temperatur.</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+        <p className="text-sm text-aether-text-secondary mt-2">{targetStatus.statusDescription}</p>
       </div>
 
+      {/* Stats */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-400 border border-cyan-500/20">
+            <TrendingDown className="h-4 w-4 shrink-0" />
+            <span className="whitespace-normal leading-relaxed">
+              {improvement !== null
+                ? `ML har ${improvement.toFixed(1)}% lavere fejl end DMI`
+                : "Temperaturmodellen evalueres løbende"}
+            </span>
+          </div>
+          {avgDiff !== null && (
+            <Badge variant="outline" className="text-xs border-white/[0.08] text-aether-text-secondary bg-white/[0.03]">
+              Typisk forskel: {avgDiff.toFixed(2)}°C
+            </Badge>
+          )}
+          {maxDiff !== null && (
+            <Badge variant="outline" className="text-xs border-white/[0.08] text-aether-text-secondary bg-white/[0.03]">
+              Største forskel: {maxDiff.toFixed(1)}°C
+            </Badge>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowChartHelp((value) => !value)}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm text-aether-text-secondary hover:text-white hover:bg-white/[0.06] transition-all w-full sm:w-auto justify-center"
+        >
+          <Info className="h-4 w-4" />
+          {showChartHelp ? "Skjul guide" : "Sådan læser du grafen"}
+        </button>
+      </div>
+
+      {showChartHelp ? (
+        <div className="glass-card p-5 border-dashed">
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="font-semibold text-white mb-1">Backtest (historik)</p>
+              <p className="text-aether-text-secondary">Grøn streg = faktisk målt temperatur. Cyan og orange viser DMI og ML for samme tidspunkt.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-white mb-1">Forecast (fremtid)</p>
+              <p className="text-aether-text-secondary">Cyan linje = ML-prognose. Orange linje = DMI-prognose. Gul viser følt temperatur.</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Backtest Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Thermometer className="h-5 w-5 text-dashboard-text-muted" />
-              Temperatur backtest - sidste 7 dage
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Thermometer className="h-5 w-5 text-aether-text-tertiary" />
+              Temperatur backtest — sidste 7 dage
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
-              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI Data</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML Prognose</span>
-              <span className="legend-item"><span className="legend-dot bg-[#10b981]" /> Faktisk Data</span>
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#22c55e]" /> Faktisk</span>
             </div>
           </div>
         </CardHeader>
@@ -227,19 +225,19 @@ export function TemperatureTab({
               >
                 <defs>
                   <linearGradient id="mlBacktestGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="dmiBacktestGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis 
-                  tick={{ fontSize: 12, fill: '#94a3b8' }} 
-                  tickFormatter={(value) => `${value}°`} 
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tickFormatter={(value) => `${value}°`}
                   domain={["dataMin - 2", "dataMax + 2"]}
                   stroke={COLORS.grid}
                 />
@@ -247,39 +245,40 @@ export function TemperatureTab({
                 {forecastBoundaryTimestamp ? (
                   <ReferenceLine
                     x={forecastBoundaryTimestamp}
-                    stroke="#475569"
+                    stroke="rgba(255,255,255,0.15)"
                     strokeWidth={2}
-                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                    strokeDasharray="5 5"
+                    label={{ value: "Nu", position: "top", fontSize: 11, fill: "#64748b", fontWeight: 600 }}
                   />
                 ) : null}
                 {showDmi ? (
-                  <Area 
-                    type="monotone" 
-                    dataKey="dmiHistory" 
-                    name="DMI-backtest" 
-                    stroke={COLORS.dmi} 
+                  <Area
+                    type="monotone"
+                    dataKey="dmiHistory"
+                    name="DMI-backtest"
+                    stroke={COLORS.dmi}
                     strokeWidth={2}
                     fill="url(#dmiBacktestGradient)"
                     dot={{ r: 2, fill: COLORS.dmi }}
                   />
                 ) : null}
                 {showMl && hasMlSeries ? (
-                  <Area 
-                    type="monotone" 
-                    dataKey="mlHistory" 
-                    name="ML-backtest" 
-                    stroke={COLORS.ml} 
+                  <Area
+                    type="monotone"
+                    dataKey="mlHistory"
+                    name="ML-backtest"
+                    stroke={COLORS.ml}
                     strokeWidth={2}
                     fill="url(#mlBacktestGradient)"
                     dot={{ r: 2, fill: COLORS.ml }}
                   />
                 ) : null}
                 {hasHistory ? (
-                  <Area 
-                    type="monotone" 
-                    dataKey="actual" 
-                    name="Faktisk temperatur" 
-                    stroke={COLORS.actual} 
+                  <Area
+                    type="monotone"
+                    dataKey="actual"
+                    name="Faktisk temperatur"
+                    stroke={COLORS.actual}
                     strokeWidth={2}
                     fill="transparent"
                     dot={{ r: 2, fill: COLORS.actual }}
@@ -288,29 +287,29 @@ export function TemperatureTab({
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-3 text-sm text-dashboard-text-muted">
-            Sammenligning af DMI&apos;s prognose, ML-modellen og den faktisk målte temperatur i de seneste 7 dage.
+          <p className="mt-3 text-sm text-aether-text-secondary">
+            Sammenligning af DMI's prognose, ML-modellen og den faktisk målte temperatur i de seneste 7 dage.
           </p>
         </CardContent>
       </Card>
 
       {/* Forecast Chart */}
-      <Card className="dashboard-card-flat">
-        <CardHeader className="pb-2">
+      <Card className="glass-card border-0">
+        <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-dashboard-text">
-              <Thermometer className="h-5 w-5 text-dashboard-text-muted" />
-              Temperaturprognose - næste 48 timer
+            <CardTitle className="flex items-center gap-2 text-base text-white">
+              <Thermometer className="h-5 w-5 text-aether-text-tertiary" />
+              Temperaturprognose — næste 48 timer
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-4 text-sm">
-              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI Data</span>
-              <span className="legend-item"><span className="legend-dot bg-[#3b82f6]" /> ML Prognose</span>
-              <span className="legend-item"><span className="legend-dot bg-amber-500" /> Føles som</span>
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <span className="legend-item"><span className="legend-dot bg-[#f97316]" /> DMI</span>
+              <span className="legend-item"><span className="legend-dot bg-[#06b6d4]" /> ML</span>
+              <span className="legend-item"><span className="legend-dot bg-[#fbbf24]" /> Føles som</span>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-dashboard-text-muted">
+          <p className="mb-3 text-sm text-aether-text-secondary">
             Faktiske data kan først vises, når tiden er gået. Her ser du vores prognoser for fremtiden.
           </p>
           <div className="h-[320px] w-full">
@@ -321,19 +320,19 @@ export function TemperatureTab({
               >
                 <defs>
                   <linearGradient id="mlForecastGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.ml} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.ml} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="dmiForecastGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COLORS.dmi} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.dmi} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
                 <XAxis {...sharedTimeAxisProps} />
-                <YAxis 
-                  tick={{ fontSize: 12, fill: '#94a3b8' }} 
-                  tickFormatter={(value) => `${value}°`} 
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tickFormatter={(value) => `${value}°`}
                   domain={["dataMin - 2", "dataMax + 2"]}
                   stroke={COLORS.grid}
                 />
@@ -378,44 +377,48 @@ export function TemperatureTab({
 
       {/* Hourly Cards */}
       <div>
-        <h3 className="mb-4 text-lg font-semibold text-dashboard-text">Næste 16 timer</h3>
+        <h3 className="section-title mb-4">Næste 16 timer</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {forecast.slice(0, 16).map((hour, index) => (
-            <Card 
-              key={hour.timestamp} 
-              className={`dashboard-card-flat ${index === 0 ? "border-dashboard-ml" : ""}`}
+            <div
+              key={hour.timestamp}
+              className={`glass-card-hover p-4 ${index === 0 ? "border-cyan-500/30" : ""}`}
             >
-              <CardContent className="p-3 text-left sm:text-center">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-dashboard-text-muted">kl. {formatDanishTime(hour.timestamp)}</p>
-                  <Badge
-                    variant={hour.effectiveTempSource === "ml" ? "default" : "secondary"}
-                    className={`max-w-full whitespace-normal text-[10px] leading-relaxed ${hour.effectiveTempSource === "ml" ? "bg-dashboard-ml" : "bg-dashboard-border"}`}
-                  >
-                    {getSourceLabel(hour.effectiveTempSource)}
-                  </Badge>
-                </div>
-                <p className="my-1 text-xl font-bold text-dashboard-text">
-                  {hour.effectiveTemp !== null ? `${Math.round(hour.effectiveTemp)}°` : "—"}
-                </p>
-                <p className="text-xs text-dashboard-ml">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs text-aether-text-tertiary">{formatDanishTime(hour.timestamp)}</p>
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] h-5 px-1.5 ${
+                    hour.effectiveTempSource === "ml"
+                      ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
+                      : "border-coral/30 text-coral bg-coral/10"
+                  }`}
+                >
+                  {getSourceLabel(hour.effectiveTempSource)}
+                </Badge>
+              </div>
+              <p className="my-1 text-2xl font-bold text-white">
+                {hour.effectiveTemp !== null ? `${Math.round(hour.effectiveTemp)}°` : "—"}
+              </p>
+              <div className="space-y-1 text-xs">
+                <p className="text-cyan-400">
                   ML {hour.mlTemp !== null ? `${Math.round(hour.mlTemp)}°` : "ikke aktiv"}
                 </p>
-                <p className="text-xs text-dashboard-dmi">
+                <p className="text-coral">
                   DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "ingen data"}
                 </p>
-                {hour.apparentTemp !== null ? (
-                  <p className="text-xs text-amber-500">
-                    Føles {Math.round(hour.apparentTemp)}°
-                  </p>
-                ) : null}
-                {index === 0 ? (
-                  <Badge variant="outline" className="mt-2 border-dashboard-ml text-dashboard-ml">
-                    Nu
-                  </Badge>
-                ) : null}
-              </CardContent>
-            </Card>
+              </div>
+              {hour.apparentTemp !== null ? (
+                <p className="text-xs text-amber-400 mt-2">
+                  Føles {Math.round(hour.apparentTemp)}°
+                </p>
+              ) : null}
+              {index === 0 ? (
+                <Badge variant="outline" className="mt-2 text-[10px] border-cyan-500/30 text-cyan-400">
+                  Nu
+                </Badge>
+              ) : null}
+            </div>
           ))}
         </div>
       </div>

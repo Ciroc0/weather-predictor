@@ -20,6 +20,21 @@ export function PerformancePage() {
     <div className="space-y-6">
       <SeoHead config={performanceSeo} />
 
+      {/* Header */}
+      <section className="glass-card p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-2">
+              Model <span className="text-gradient-cyan">Performance</span>
+            </h1>
+            <p className="text-sm text-aether-text-secondary max-w-2xl leading-relaxed">
+              Sammenlign ML-modellernes præcision med DMI's prognoser og faktisk vejrdata. 
+              Se hvordan modellen klarer sig på forskellige parametre og tidshorisonter.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <Suspense
         fallback={
           <PageState

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 
 import { SeoBreadcrumbs } from "@/components/SeoBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { BreadcrumbItem } from "@/lib/seo";
 
 interface RelatedLink {
@@ -24,43 +24,41 @@ export function PageIntro({
   relatedLinks = [],
 }: PageIntroProps) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <SeoBreadcrumbs items={breadcrumbs} />
-      <div className="grid gap-4 lg:items-start lg:grid-cols-[1.25fr_0.75fr]">
-        <Card className="self-start border-slate-200 dark:border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 md:text-4xl">
-              <h1>{title}</h1>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm leading-7 text-slate-600 dark:text-slate-400">
+      <div className="grid gap-6 lg:items-start lg:grid-cols-[1.25fr_0.75fr]">
+        <div className="glass-card p-6 md:p-8">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
+            {title}
+          </h1>
+          <div className="space-y-3 text-sm leading-relaxed text-aether-text-secondary">
             {paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {relatedLinks.length > 0 ? (
-          <Card className="self-start border-slate-200 dark:border-slate-800">
-            <CardHeader>
-              <CardTitle>Fortsæt til</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="glass-card p-6">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Fortsæt til</h3>
+            <div className="space-y-3">
               {relatedLinks.map((link) => (
-                <div key={link.to} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                  <Link
-                    to={link.to}
-                    className="text-base font-medium text-slate-900 hover:underline dark:text-slate-100"
-                  >
-                    {link.label}
-                  </Link>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                    {link.description}
-                  </p>
-                </div>
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="group block rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/[0.12] hover:bg-white/[0.04] transition-all"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">
+                      {link.label}
+                    </span>
+                    <ArrowUpRight className="h-4 w-4 text-aether-text-tertiary group-hover:text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                  </div>
+                  <p className="text-xs text-aether-text-secondary leading-relaxed">{link.description}</p>
+                </Link>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : null}
       </div>
     </section>
