@@ -134,7 +134,7 @@ export function RainTab({
     }
 
     return (
-      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+      <div className="chart-tooltip">
         <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
@@ -158,7 +158,7 @@ export function RainTab({
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {rainAlert ? (
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-200">
+        <div className="rounded-md border border-white/[0.12] bg-[#0c0e11] p-4 text-sm text-[#d8dde3]">
           <strong>{rainAlert.title}:</strong> {rainAlert.message}
         </div>
       ) : null}
@@ -168,8 +168,8 @@ export function RainTab({
           <Badge
             variant="outline"
             className={rainEventStatus.hasActiveModel
-              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+              ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+              : "border-white/[0.08] text-[#9aa3ad] bg-transparent"
             }
           >
             Regnrisiko: {rainEventStatus.statusLabel}
@@ -177,8 +177,8 @@ export function RainTab({
           <Badge
             variant="outline"
             className={rainAmountStatus.hasActiveModel
-              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+              ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+              : "border-white/[0.08] text-[#9aa3ad] bg-transparent"
             }
           >
             Regnmængde: {rainAmountStatus.statusLabel}
@@ -189,33 +189,33 @@ export function RainTab({
 
       {/* Current Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className={`glass-card p-6 ${currentRain.effectiveRainProb > 50 ? "border-sky-500/30" : ""}`}>
+        <div className={`glass-card p-6 ${currentRain.effectiveRainProb > 50 ? "border-[#11c5d6]/40" : ""}`}>
           <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Regnrisiko lige nu</p>
           <div className="mt-2 flex items-center gap-2">
-            {currentRain.effectiveRainProb > 50 ? <CloudRain className="h-6 w-6 text-sky-400" /> : <Sun className="h-6 w-6 text-amber-400" />}
+            {currentRain.effectiveRainProb > 50 ? <CloudRain className="h-6 w-6 text-[#11c5d6]" /> : <Sun className="h-6 w-6 text-[#9aa3ad]" />}
             <span className="text-2xl font-bold text-white">{currentRain.effectiveRainProb > 50 ? "Regn i sigte" : "Tørt lige nu"}</span>
           </div>
           <Badge
             variant="outline"
             className={`mt-3 text-[10px] ${
               currentRain.effectiveRainProbSource === "ml"
-                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                : "border-coral/30 text-coral bg-coral/10"
+                ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
             }`}
           >
             {getSourceLabel(currentRain.effectiveRainProbSource)}
           </Badge>
           <div className="mt-3 flex items-center gap-3 text-sm">
-            <span className="text-cyan-400">ML {currentRain.mlRainProb.toFixed(0)}%</span>
+            <span className="text-[#11c5d6]">ML {currentRain.mlRainProb.toFixed(0)}%</span>
             <span className="text-aether-text-tertiary">•</span>
-            <span className="text-coral">DMI {currentRain.dmiRainProb.toFixed(0)}%</span>
+            <span className="text-[#9aa3ad]">DMI {currentRain.dmiRainProb.toFixed(0)}%</span>
           </div>
         </div>
 
         <div className="glass-card p-6">
           <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Næste 24 timer</p>
           <div className="mt-2 flex items-center gap-2">
-            <Droplets className="h-5 w-5 text-cyan-400" />
+            <Droplets className="h-5 w-5 text-[#11c5d6]" />
             <span className="text-2xl font-bold text-white">
               {forecast.slice(0, 24).reduce((sum, point) => sum + point.effectiveRainAmount, 0).toFixed(1)} mm
             </span>
@@ -224,8 +224,8 @@ export function RainTab({
             variant="outline"
             className={`mt-3 text-[10px] ${
               currentRain.effectiveRainAmountSource === "ml"
-                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                : "border-coral/30 text-coral bg-coral/10"
+                ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
             }`}
           >
             {getSourceLabel(currentRain.effectiveRainAmountSource)}
@@ -404,7 +404,7 @@ export function RainTab({
         <Card className="glass-card border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base text-white">
-              <Sun className="h-4 w-4 text-amber-400" />
+              <Sun className="h-4 w-4 text-[#11c5d6]" />
               Mulige tørre perioder
             </CardTitle>
           </CardHeader>
@@ -415,8 +415,8 @@ export function RainTab({
                 className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/[0.1] hover:bg-white/[0.04] transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-                    <Cloud className="h-5 w-5 text-amber-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md border border-white/[0.08] bg-[#0c0e11]">
+                    <Cloud className="h-5 w-5 text-[#11c5d6]" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">

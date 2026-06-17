@@ -120,7 +120,7 @@ export function TemperatureTab({
     }
 
     return (
-      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+      <div className="chart-tooltip">
         <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
@@ -141,8 +141,8 @@ export function TemperatureTab({
           <Badge
             variant="outline"
             className={targetStatus.hasActiveModel
-              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+              ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+              : "border-white/[0.08] text-[#9aa3ad] bg-transparent"
             }
           >
             {targetStatus.statusLabel}
@@ -157,7 +157,7 @@ export function TemperatureTab({
       {/* Stats */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex max-w-full items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-400 border border-cyan-500/20">
+          <div className="flex max-w-full items-center gap-2 rounded-md border border-white/[0.1] bg-[#0c0e11] px-4 py-2.5 text-sm font-semibold text-[#11c5d6]">
             <TrendingDown className="h-4 w-4 shrink-0" />
             <span className="whitespace-normal leading-relaxed">
               {improvement !== null
@@ -258,7 +258,7 @@ export function TemperatureTab({
                     name="DMI-backtest"
                     stroke={COLORS.dmi}
                     strokeWidth={2}
-                    fill="url(#dmiBacktestGradient)"
+                    fill="transparent"
                     dot={{ r: 2, fill: COLORS.dmi }}
                   />
                 ) : null}
@@ -269,7 +269,7 @@ export function TemperatureTab({
                     name="ML-backtest"
                     stroke={COLORS.ml}
                     strokeWidth={2}
-                    fill="url(#mlBacktestGradient)"
+                    fill="transparent"
                     dot={{ r: 2, fill: COLORS.ml }}
                   />
                 ) : null}
@@ -344,7 +344,7 @@ export function TemperatureTab({
                     name="DMI-prognose"
                     stroke={COLORS.dmi}
                     strokeWidth={2}
-                    fill="url(#dmiForecastGradient)"
+                    fill="transparent"
                     dot={{ r: 2, fill: COLORS.dmi }}
                   />
                 ) : null}
@@ -355,7 +355,7 @@ export function TemperatureTab({
                     name="ML-prognose"
                     stroke={COLORS.ml}
                     strokeWidth={2}
-                    fill="url(#mlForecastGradient)"
+                    fill="transparent"
                     dot={{ r: 2, fill: COLORS.ml }}
                   />
                 ) : null}
@@ -382,7 +382,7 @@ export function TemperatureTab({
           {forecast.slice(0, 16).map((hour, index) => (
             <div
               key={hour.timestamp}
-              className={`glass-card-hover p-4 ${index === 0 ? "border-cyan-500/30" : ""}`}
+              className={`glass-card-hover p-4 ${index === 0 ? "border-[#11c5d6]/40" : ""}`}
             >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <p className="text-xs text-aether-text-tertiary">{formatDanishTime(hour.timestamp)}</p>
@@ -390,8 +390,8 @@ export function TemperatureTab({
                   variant="outline"
                   className={`text-[10px] h-5 px-1.5 ${
                     hour.effectiveTempSource === "ml"
-                      ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                      : "border-coral/30 text-coral bg-coral/10"
+                      ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                      : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
                   }`}
                 >
                   {getSourceLabel(hour.effectiveTempSource)}
@@ -401,20 +401,26 @@ export function TemperatureTab({
                 {hour.effectiveTemp !== null ? `${Math.round(hour.effectiveTemp)}°` : "—"}
               </p>
               <div className="space-y-1 text-xs">
-                <p className="text-cyan-400">
+                <p className="text-[#11c5d6]">
                   ML {hour.mlTemp !== null ? `${Math.round(hour.mlTemp)}°` : "ikke aktiv"}
                 </p>
-                <p className="text-coral">
+                <p className="text-[#9aa3ad]">
                   DMI {hour.dmiTemp !== null ? `${Math.round(hour.dmiTemp)}°` : "ingen data"}
                 </p>
               </div>
               {hour.apparentTemp !== null ? (
-                <p className="text-xs text-amber-400 mt-2">
+                <p className="text-xs text-[#d8dde3] mt-2">
                   Føles {Math.round(hour.apparentTemp)}°
                 </p>
               ) : null}
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/[0.08] pt-3 text-[11px] text-[#9aa3ad]">
+                <span>Lead +{hour.leadTimeHours ?? 0}h</span>
+                <span>Cloud {hour.cloudCover === null ? "--" : `${hour.cloudCover.toFixed(0)}%`}</span>
+                <span>Humidity {hour.humidity === null ? "--" : `${hour.humidity.toFixed(0)}%`}</span>
+                <span>Pressure {hour.pressure === null ? "--" : `${hour.pressure.toFixed(0)} hPa`}</span>
+              </div>
               {index === 0 ? (
-                <Badge variant="outline" className="mt-2 text-[10px] border-cyan-500/30 text-cyan-400">
+                <Badge variant="outline" className="mt-2 text-[10px] border-[#11c5d6]/40 text-[#11c5d6]">
                   Nu
                 </Badge>
               ) : null}

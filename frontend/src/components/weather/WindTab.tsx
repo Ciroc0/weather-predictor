@@ -80,7 +80,7 @@ function WindCompass({ direction, size = 84 }: { direction: number | null; size?
       <span className="absolute bottom-1 text-[10px] font-bold text-aether-text-tertiary">S</span>
       <span className="absolute left-1 text-[10px] font-bold text-aether-text-tertiary">V</span>
       <motion.div animate={{ rotate: rotation }} transition={{ duration: 0.45, ease: "easeOut" }}>
-        <Navigation className="h-8 w-8 text-cyan-400" fill="currentColor" />
+        <Navigation className="h-8 w-8 text-[#11c5d6]" fill="currentColor" />
       </motion.div>
       <span className="absolute bottom-4 text-[10px] font-medium text-aether-text-tertiary">{label}</span>
     </div>
@@ -150,7 +150,7 @@ export function WindTab({
     }
 
     return (
-      <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+      <div className="chart-tooltip">
         <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
         {payload.map((entry) => (
           <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-xs">
@@ -170,7 +170,7 @@ export function WindTab({
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {warning ? (
-        <Alert className="border-rose-500/30 bg-rose-500/10 text-rose-200">
+        <Alert className="border-white/[0.12] bg-[#0c0e11] text-[#d8dde3]">
           <AlertTriangle className="h-5 w-5" />
           <AlertDescription>{warning.message}</AlertDescription>
         </Alert>
@@ -181,8 +181,8 @@ export function WindTab({
           <Badge
             variant="outline"
             className={windStatus.hasActiveModel
-              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+              ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+              : "border-white/[0.08] text-[#9aa3ad] bg-transparent"
             }
           >
             {windStatus.statusLabel}
@@ -190,8 +190,8 @@ export function WindTab({
           <Badge
             variant="outline"
             className={gustStatus.hasActiveModel
-              ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-              : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03]"
+              ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+              : "border-white/[0.08] text-[#9aa3ad] bg-transparent"
             }
           >
             Vindstød: {gustStatus.statusLabel}
@@ -214,15 +214,15 @@ export function WindTab({
                 variant="outline"
                 className={`mt-3 text-[10px] ${
                   currentWind.effectiveWindSpeedSource === "ml"
-                    ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                    : "border-coral/30 text-coral bg-coral/10"
+                    ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                    : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
                 }`}
               >
                 {getSourceLabel(currentWind.effectiveWindSpeedSource)}
               </Badge>
               <div className="mt-3 space-y-1 text-xs">
-                <p className="text-cyan-400">ML: {currentWind.mlWindSpeed !== null ? `${currentWind.mlWindSpeed.toFixed(1)} m/s` : "ikke aktiv"}</p>
-                <p className="text-coral">DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "ingen data"}</p>
+                <p className="text-[#11c5d6]">ML: {currentWind.mlWindSpeed !== null ? `${currentWind.mlWindSpeed.toFixed(1)} m/s` : "ikke aktiv"}</p>
+                <p className="text-[#9aa3ad]">DMI: {currentWind.dmiWindSpeed !== null ? `${currentWind.dmiWindSpeed.toFixed(1)} m/s` : "ingen data"}</p>
               </div>
             </div>
             <WindCompass direction={currentWind.windDirection} size={104} />
@@ -239,15 +239,15 @@ export function WindTab({
             variant="outline"
             className={`mt-3 text-[10px] ${
               currentWind.effectiveWindGustSource === "ml"
-                ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                : "border-coral/30 text-coral bg-coral/10"
+                ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
             }`}
           >
             {getSourceLabel(currentWind.effectiveWindGustSource)}
           </Badge>
           <div className="mt-3 space-y-1 text-xs">
-            <p className="text-cyan-400">ML: {currentWind.mlWindGust !== null ? `${currentWind.mlWindGust.toFixed(1)} m/s` : "ikke aktiv"}</p>
-            <p className="text-coral">DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "ingen data"}</p>
+            <p className="text-[#11c5d6]">ML: {currentWind.mlWindGust !== null ? `${currentWind.mlWindGust.toFixed(1)} m/s` : "ikke aktiv"}</p>
+            <p className="text-[#9aa3ad]">DMI: {currentWind.dmiWindGust !== null ? `${currentWind.dmiWindGust.toFixed(1)} m/s` : "ingen data"}</p>
           </div>
         </div>
 
@@ -306,10 +306,10 @@ export function WindTab({
                   />
                 ) : null}
                 {showDmi ? (
-                  <Area type="monotone" dataKey="dmiSpeedHistory" name="DMI Backtest" stroke={COLORS.dmi} strokeWidth={2} fill="url(#windDmiGradient)" dot={false} />
+                  <Area type="monotone" dataKey="dmiSpeedHistory" name="DMI Backtest" stroke={COLORS.dmi} strokeWidth={2} fill="transparent" dot={false} />
                 ) : null}
                 {showMlSpeed ? (
-                  <Area type="monotone" dataKey="mlSpeedHistory" name="ML Backtest" stroke={COLORS.ml} strokeWidth={2} fill="url(#windMlGradient)" dot={false} />
+                  <Area type="monotone" dataKey="mlSpeedHistory" name="ML Backtest" stroke={COLORS.ml} strokeWidth={2} fill="transparent" dot={false} />
                 ) : null}
                 {hasHistory ? (
                   <Line type="monotone" dataKey="actualSpeed" name="Faktisk vind" stroke={COLORS.actual} strokeWidth={2} dot={false} />
@@ -359,10 +359,10 @@ export function WindTab({
                 <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                 <Tooltip content={<CustomTooltip />} />
                 {showDmi ? (
-                  <Area type="monotone" dataKey="dmiSpeedForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="url(#windForecastDmiGradient)" dot={false} />
+                  <Area type="monotone" dataKey="dmiSpeedForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="transparent" dot={false} />
                 ) : null}
                 {showMlSpeed ? (
-                  <Area type="monotone" dataKey="mlSpeedForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="url(#windForecastMlGradient)" dot={false} />
+                  <Area type="monotone" dataKey="mlSpeedForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="transparent" dot={false} />
                 ) : null}
               </AreaChart>
             </ResponsiveContainer>
@@ -414,10 +414,10 @@ export function WindTab({
                       />
                     ) : null}
                     {showDmi ? (
-                      <Area type="monotone" dataKey="dmiGustHistory" name="DMI Backtest" stroke={COLORS.dmi} strokeWidth={2} fill="url(#gustDmiGradient)" dot={false} />
+                      <Area type="monotone" dataKey="dmiGustHistory" name="DMI Backtest" stroke={COLORS.dmi} strokeWidth={2} fill="transparent" dot={false} />
                     ) : null}
                     {showMlGust ? (
-                      <Area type="monotone" dataKey="mlGustHistory" name="ML Backtest" stroke={COLORS.ml} strokeWidth={2} fill="url(#gustMlGradient)" dot={false} />
+                      <Area type="monotone" dataKey="mlGustHistory" name="ML Backtest" stroke={COLORS.ml} strokeWidth={2} fill="transparent" dot={false} />
                     ) : null}
                     {hasHistory ? (
                       <Line type="monotone" dataKey="actualGust" name="Faktisk vindstød" stroke={COLORS.actual} strokeWidth={2} dot={false} />
@@ -463,10 +463,10 @@ export function WindTab({
                     <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(value) => Number(value).toFixed(1)} stroke={COLORS.grid} />
                     <Tooltip content={<CustomTooltip />} />
                     {showDmi ? (
-                      <Area type="monotone" dataKey="dmiGustForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="url(#gustForecastDmiGradient)" dot={false} />
+                      <Area type="monotone" dataKey="dmiGustForecast" name="DMI Forecast" stroke={COLORS.dmi} strokeWidth={2} fill="transparent" dot={false} />
                     ) : null}
                     {showMlGust ? (
-                      <Area type="monotone" dataKey="mlGustForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="url(#gustForecastMlGradient)" dot={false} />
+                      <Area type="monotone" dataKey="mlGustForecast" name="ML Forecast" stroke={COLORS.ml} strokeWidth={2} fill="transparent" dot={false} />
                     ) : null}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -490,8 +490,8 @@ export function WindTab({
                 variant="outline"
                 className={`mt-1 text-[10px] ${
                   hour.effectiveWindSpeedSource === "ml"
-                    ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10"
-                    : "border-coral/30 text-coral bg-coral/10"
+                    ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent"
+                    : "border-white/[0.1] text-[#9aa3ad] bg-transparent"
                 }`}
               >
                 {getSourceLabel(hour.effectiveWindSpeedSource)}

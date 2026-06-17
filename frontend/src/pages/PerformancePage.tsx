@@ -20,27 +20,22 @@ export function PerformancePage() {
     <div className="space-y-6">
       <SeoHead config={performanceSeo} />
 
-      {/* Header */}
       <section className="glass-card p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-2">
-              Model <span className="text-gradient-cyan">Performance</span>
-            </h1>
-            <p className="text-sm text-aether-text-secondary max-w-2xl leading-relaxed">
-              Sammenlign ML-modellernes præcision med DMI's prognoser og faktisk vejrdata. 
-              Se hvordan modellen klarer sig på forskellige parametre og tidshorisonter.
-            </p>
-          </div>
-        </div>
+        <p className="metric-label">Performance</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+          Model performance
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#9aa3ad]">
+          Verifikation, fejlrate, lead buckets og modelmetadata samlet for DMI baseline og ML-justering.
+        </p>
       </section>
 
       <Suspense
         fallback={
           <PageState
             mode="loading"
-            title="Indlæser performancegrafer"
-            description="Historik, fejlanalyse og modelstatus for Aarhus gøres klar."
+            title="Indlaeser performancegrafer"
+            description="Historik, fejlanalyse og modelstatus for Aarhus goeres klar."
           />
         }
       >

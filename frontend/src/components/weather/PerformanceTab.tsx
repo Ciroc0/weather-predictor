@@ -115,7 +115,7 @@ function SeriesTooltip({
   }
 
   return (
-    <div className="rounded-xl border border-white/[0.12] bg-[#0f172a]/95 backdrop-blur-xl p-3 shadow-2xl">
+    <div className="chart-tooltip">
       <p className="mb-2 font-medium text-white text-sm">{formatTooltipDateTime(label)}</p>
       {payload.map((entry) => (
         <div key={`${entry.name}-${entry.value}`} className="flex items-center gap-2 text-sm">
@@ -192,8 +192,8 @@ function ErrorChart({
           <XAxis {...sharedTimeAxisProps} />
           <YAxis tick={{ fontSize: 11, fill: '#64748b' }} domain={yDomain} stroke={COLORS.grid} />
           <Tooltip content={<SeriesTooltip suffix={suffix} decimals={2} />} />
-          <Area type="monotone" dataKey="dmiError" name="DMI fejl" stroke={COLORS.dmi} fill="url(#dmiErrorGradient)" strokeWidth={2} dot={false} />
-          <Area type="monotone" dataKey="mlError" name="ML fejl" stroke={COLORS.ml} fill="url(#mlErrorGradient)" strokeWidth={2} dot={false} />
+          <Area type="monotone" dataKey="dmiError" name="DMI fejl" stroke={COLORS.dmi} fill="transparent" strokeWidth={2} dot={false} />
+          <Area type="monotone" dataKey="mlError" name="ML fejl" stroke={COLORS.ml} fill="transparent" strokeWidth={2} dot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -259,6 +259,7 @@ function toErrorData(
 
 export function PerformanceTab({
   verification,
+  leadBuckets,
   featureImportance,
   modelInfo,
   history,
@@ -280,6 +281,10 @@ export function PerformanceTab({
     status: targetStatus[target],
   }));
 
+  const visibleLeadBuckets = useMemo(() => {
+    return leadBuckets.filter((bucket) => selectedTargets.includes(bucket.target));
+  }, [leadBuckets, selectedTargets]);
+
   const temperatureSeries = useMemo(() => buildTemperatureSeries(history), [history]);
   const windSpeedSeries = useMemo(() => buildWindSpeedSeries(history), [history]);
   const windGustSeries = useMemo(() => buildWindGustSeries(history), [history]);
@@ -296,47 +301,47 @@ export function PerformanceTab({
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
       {/* Metric Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="glass-card p-6 border-l-2 border-l-emerald-400">
+        <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">ML win rate</p>
-              <p className="text-4xl font-bold text-emerald-400">
+              <p className="text-4xl font-bold text-[#11c5d6]">
                 {verification.winRate !== null ? `${verification.winRate.toFixed(1)}%` : "—"}
               </p>
               <p className="text-xs text-aether-text-secondary mt-1">Hvor ofte ML ramte rigtigst</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10">
-              <Award className="h-6 w-6 text-emerald-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-md border border-white/[0.08] bg-[#0c0e11]">
+              <Award className="h-6 w-6 text-[#11c5d6]" />
             </div>
           </div>
         </div>
 
-        <div className="glass-card p-6 border-l-2 border-l-cyan-400">
+        <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">Gennemsnitlig afvigelse</p>
-              <p className="text-4xl font-bold text-cyan-400">
+              <p className="text-4xl font-bold text-[#11c5d6]">
                 {verification.maeMl !== null ? verification.maeMl.toFixed(2) : "—"}
               </p>
               <p className="text-xs text-aether-text-secondary mt-1">Typisk afvigelse fra virkeligheden</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/10">
-              <Target className="h-6 w-6 text-cyan-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-md border border-white/[0.08] bg-[#0c0e11]">
+              <Target className="h-6 w-6 text-[#11c5d6]" />
             </div>
           </div>
         </div>
 
-        <div className="glass-card p-6 border-l-2 border-l-violet-400">
+        <div className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-aether-text-tertiary uppercase tracking-wider mb-2">RMSE score</p>
-              <p className="text-4xl font-bold text-violet-400">
+              <p className="text-4xl font-bold text-[#11c5d6]">
                 {verification.rmseMl !== null ? verification.rmseMl.toFixed(2) : "—"}
               </p>
               <p className="text-xs text-aether-text-secondary mt-1">Jo lavere værdi, jo bedre</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-400/10">
-              <BarChart3 className="h-6 w-6 text-violet-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-md border border-white/[0.08] bg-[#0c0e11]">
+              <BarChart3 className="h-6 w-6 text-[#11c5d6]" />
             </div>
           </div>
         </div>
@@ -347,7 +352,7 @@ export function PerformanceTab({
           <button
             key={item}
             onClick={() => setSection(item)}
-            className={`rounded-xl px-5 py-2.5 text-sm font-medium transition-all ${section === item ? "bg-white/[0.12] text-white shadow-lg" : "bg-white/[0.03] text-aether-text-secondary hover:text-white hover:bg-white/[0.06] border border-white/[0.06]"}`}
+            className={`rounded-md px-5 py-2.5 text-sm font-medium transition-colors ${section === item ? "bg-[#14181d] text-white" : "border border-white/[0.08] bg-[#0c0e11] text-[#9aa3ad] hover:text-white"}`}
           >
             {sectionLabels[item]}
           </button>
@@ -445,6 +450,50 @@ export function PerformanceTab({
         </CardContent>
       </Card>
 
+      <Card className="glass-card border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base text-white">
+            <Target className="h-5 w-5 text-[#11c5d6]" />
+            Lead buckets: {sectionLabels[section]}
+          </CardTitle>
+          <CardDescription className="text-aether-text-secondary text-sm">
+            Performance fordelt paa forecast-vindue. Lavere metric er bedre, positiv improvement betyder ML-forbedring.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {visibleLeadBuckets.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead className="border-b border-white/[0.08] text-[10px] uppercase tracking-[0.16em] text-[#68717b]">
+                  <tr>
+                    <th className="px-3 py-3 font-medium">Target</th>
+                    <th className="px-3 py-3 font-medium">Bucket</th>
+                    <th className="px-3 py-3 font-medium">Baseline</th>
+                    <th className="px-3 py-3 font-medium">ML</th>
+                    <th className="px-3 py-3 font-medium">Improvement</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06] text-[#d8dde3]">
+                  {visibleLeadBuckets.map((bucket) => (
+                    <tr key={`${bucket.target}-${bucket.bucket}`}>
+                      <td className="px-3 py-3">{getTargetLabel(targetLabels, bucket.target)}</td>
+                      <td className="px-3 py-3">{bucket.label || bucket.bucket}</td>
+                      <td className="px-3 py-3">{bucket.baselineMetric === null ? "--" : bucket.baselineMetric.toFixed(3)}</td>
+                      <td className="px-3 py-3">{bucket.mlMetric === null ? "--" : bucket.mlMetric.toFixed(3)}</td>
+                      <td className="px-3 py-3 text-[#11c5d6]">
+                        {bucket.improvementPct === null ? "--" : `${bucket.improvementPct.toFixed(1)}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-[#9aa3ad]">Ingen lead bucket performance for dette signal endnu.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="glass-card border-0">
           <CardHeader>
@@ -465,14 +514,14 @@ export function PerformanceTab({
                       {humanizeFeatureName(feature.feature)}{" "}
                       <span className="text-aether-text-tertiary">({getFeatureTargetBadge(feature, targetLabels)})</span>
                     </span>
-                    <span className="font-medium text-cyan-400">{(feature.importance * 100).toFixed(1)}%</span>
+                    <span className="font-medium text-[#11c5d6]">{(feature.importance * 100).toFixed(1)}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.max(feature.importance * 100, 2)}%` }}
                       transition={{ duration: 0.8, ease: "easeOut" }}
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500"
+                      className="h-full rounded-full bg-[#11c5d6]"
                     />
                   </div>
                 </div>
@@ -515,7 +564,7 @@ export function PerformanceTab({
                     <span className="text-sm font-medium text-white">{getTargetLabel(targetLabels, target)}</span>
                     <Badge
                       variant="outline"
-                      className={status.hasActiveModel ? "border-cyan-500/30 text-cyan-400 bg-cyan-400/10 text-[10px]" : "border-white/[0.08] text-aether-text-secondary bg-white/[0.03] text-[10px]"}
+                      className={status.hasActiveModel ? "border-[#11c5d6]/40 text-[#11c5d6] bg-transparent text-[10px]" : "border-white/[0.08] text-[#9aa3ad] bg-transparent text-[10px]"}
                     >
                       {status.statusLabel}
                     </Badge>

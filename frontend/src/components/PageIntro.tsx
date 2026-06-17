@@ -31,7 +31,7 @@ export function PageIntro({
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
             {title}
           </h1>
-          <div className="space-y-3 text-sm leading-relaxed text-aether-text-secondary">
+          <div className="space-y-3 text-sm leading-relaxed text-[#9aa3ad]">
             {paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
@@ -46,15 +46,15 @@ export function PageIntro({
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="group block rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/[0.12] hover:bg-white/[0.04] transition-all"
+                  className="group block rounded-md border border-white/[0.08] bg-[#0c0e11] p-4 transition-colors hover:border-white/[0.16] hover:bg-[#11151a]"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">
+                    <span className="text-sm font-semibold text-white transition-colors group-hover:text-[#11c5d6]">
                       {link.label}
                     </span>
-                    <ArrowUpRight className="h-4 w-4 text-aether-text-tertiary group-hover:text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    <ArrowUpRight className="h-4 w-4 text-[#747d87] transition-colors group-hover:text-[#11c5d6]" />
                   </div>
-                  <p className="text-xs text-aether-text-secondary leading-relaxed">{link.description}</p>
+                  <p className="text-xs leading-relaxed text-[#9aa3ad]">{link.description}</p>
                 </Link>
               ))}
             </div>
