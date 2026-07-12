@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Cloud, Menu, RefreshCw, X } from "lucide-react";
+import { CloudSun, Info, Menu, RefreshCw, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 import { formatDanishTime } from "@/lib/weather";
@@ -25,83 +24,42 @@ export function Navigation({ lastUpdated, onRefresh, isRefreshing, isStale }: Na
   const updatedText = lastUpdated ? formatDanishTime(lastUpdated) : "Ingen data";
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.08] bg-[#08090b]/95">
-      <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.1] bg-[#101216]">
-            <Cloud className="h-4 w-4 text-[#11c5d6]" />
-          </span>
-          <span className="text-sm font-semibold tracking-tight text-white">Aarhus Vejr</span>
+    <header className="site-header">
+      <div className="site-header-inner">
+        <Link to="/" className="brand-mark" aria-label="Aarhus Vejr">
+          <CloudSun aria-hidden="true" />
+          <span>Aarhus Vejr</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="desktop-nav" aria-label="Primær navigation">
           {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              end={item.end}
-              to={item.href}
-              className={({ isActive }) => (isActive ? "nav-pill-active" : "nav-pill-inactive")}
-            >
+            <NavLink key={item.href} end={item.end} to={item.href} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
               {item.label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden text-right sm:block">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-[#68717b]">
-              {isStale ? "Cache" : "Live"} / {updatedText}
-            </p>
-          </div>
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/[0.1] bg-[#101216] text-[#9aa3ad] transition-colors hover:text-white disabled:opacity-50"
-            aria-label="Genindlaes data"
-            title="Genindlaes data"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            onClick={() => setMobileMenuOpen((value) => !value)}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/[0.1] bg-[#101216] text-[#9aa3ad] transition-colors hover:text-white md:hidden"
-            aria-label={mobileMenuOpen ? "Luk menu" : "Aabn menu"}
-          >
-            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        <div className="data-status">
+          <span>Data via Hugging Face <Info aria-hidden="true" /></span>
+          <button onClick={onRefresh} disabled={isRefreshing} aria-label="Genindlæs data">
+            {isStale ? "Cache" : "Live"} kl. {updatedText}
+            <RefreshCw className={isRefreshing ? "animate-spin" : ""} aria-hidden="true" />
           </button>
         </div>
-      </div>
 
-      <AnimatePresence>
-        {mobileMenuOpen ? (
-          <motion.nav
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16 }}
-            className="border-t border-white/[0.08] bg-[#08090b] px-4 py-3 md:hidden"
-          >
-            <div className="mx-auto grid max-w-[1360px] gap-1">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.href}
-                  end={item.end}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    [
-                      "rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive ? "bg-[#14181d] text-white" : "text-[#9aa3ad] hover:bg-[#11151a] hover:text-white",
-                    ].join(" ")
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </div>
-          </motion.nav>
-        ) : null}
-      </AnimatePresence>
+        <button className="mobile-menu-button" onClick={() => setMobileMenuOpen((open) => !open)} aria-label={mobileMenuOpen ? "Luk menu" : "Åbn menu"}>
+          {mobileMenuOpen ? <X /> : <Menu />}
+        </button>
+      </div>
+      {mobileMenuOpen ? (
+        <nav className="mobile-nav" aria-label="Mobil navigation">
+          {navItems.map((item) => (
+            <NavLink key={item.href} end={item.end} to={item.href} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => isActive ? "active" : ""}>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      ) : null}
     </header>
   );
 }
